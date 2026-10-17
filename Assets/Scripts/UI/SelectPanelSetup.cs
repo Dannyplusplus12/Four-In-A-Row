@@ -27,6 +27,7 @@ public class SelectPanelSetup : MonoBehaviour
     public RectTransform p2TurnStar;
     public RectTransform randomTurnStar;
     public RectTransform turnHighlight;
+    public UIButtonPopEffect firstMoveButtonPopEffect;
 
     [Header("Difficulty")]
     public GameObject difficultyGroup;
@@ -46,7 +47,6 @@ public class SelectPanelSetup : MonoBehaviour
         if (subTitleImage != null)
         {
             subTitleImage.sprite = isOnePlayer ? onePlayerTitleSprite : twoPlayerTitleSprite;
-            subTitleImage.SetNativeSize();
         }
 
         if (player2Input != null)
@@ -65,6 +65,10 @@ public class SelectPanelSetup : MonoBehaviour
     {
         GameData.isP1Green = !GameData.isP1Green;
         UpdateColorDisplay();
+        PlayPop(p1ColorStar);
+        PlayPop(p2ColorStar);
+        PlayPop(btnSwapLeftStar);
+        PlayPop(btnSwapRightStar);
     }
 
     private void UpdateColorDisplay()
@@ -82,6 +86,8 @@ public class SelectPanelSetup : MonoBehaviour
     {
         GameData.firstMove = (GameData.FirstMoveOption)(((int)GameData.firstMove + 1) % 3);
         UpdateFirstMoveUI(animate: true);
+        if (firstMoveButtonPopEffect != null)
+            firstMoveButtonPopEffect.PlayPop();
     }
 
     private void UpdateFirstMoveUI(bool animate)
@@ -112,6 +118,14 @@ public class SelectPanelSetup : MonoBehaviour
                 turnHighlight.gameObject.SetActive(true);
             }
         }
+    }
+
+    private void PlayPop(Component target)
+    {
+        if (target == null) return;
+
+        UIButtonPopEffect popEffect = target.GetComponent<UIButtonPopEffect>();
+        if (popEffect != null) popEffect.PlayPop();
     }
 
     private void ResetTurnStar(RectTransform star)

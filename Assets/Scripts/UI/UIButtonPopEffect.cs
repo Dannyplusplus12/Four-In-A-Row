@@ -33,8 +33,20 @@ public class UIButtonPopEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
 
     public void OnPointerUp(PointerEventData eventData)
     {
+        PlayPop();
+    }
+
+    public void PlayPop()
+    {
         if (currentAnim != null) StopCoroutine(currentAnim);
+        rectTransform.localScale = originalScale;
         currentAnim = StartCoroutine(PopOut());
+    }
+
+    public void PlayPopAtCurrentScale()
+    {
+        originalScale = rectTransform.localScale;
+        PlayPop();
     }
 
     private IEnumerator PopOut()
