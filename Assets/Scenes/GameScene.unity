@@ -1119,7 +1119,7 @@ MonoBehaviour:
   gridOffset: {x: 0, y: -5}
   gravity: 1800
   minimumDuration: 0.12
-  bounceHeight: 15
+  bounceHeight: 25
 --- !u!114 &1111336587
 MonoBehaviour:
   m_ObjectHideFlags: 0

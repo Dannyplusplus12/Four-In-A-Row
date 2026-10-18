@@ -3,8 +3,10 @@
 /[Oo]bj/
 /[Bb]uild/
 /[Bb]uilds/
+/BuildAPK/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
+/\.utmp/
 /[Mm]emoryCaptures/
 /[Rr]ecordings/
 .vs/
