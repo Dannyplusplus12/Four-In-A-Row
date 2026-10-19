@@ -10,6 +10,8 @@ public sealed class BoardView : MonoBehaviour
     [SerializeField] private RectTransform boardRoot;
     [SerializeField] private RectTransform boardImage;
     [SerializeField] private RectTransform piecePrefab;
+    [SerializeField] private Sprite greenStarSprite;
+    [SerializeField] private Sprite redStarSprite;
     [SerializeField] private float cellWidth = 96f;
     [SerializeField] private float cellHeight = 96f;
     [SerializeField] private Vector2 gridOffset;
@@ -95,7 +97,13 @@ public sealed class BoardView : MonoBehaviour
         view.sizeDelta = piecePrefab.sizeDelta;
         view.localScale = piecePrefab.localScale;
         Image image = view.GetComponentInChildren<Image>();
-        if (image != null) image.color = piece.OwnerId == 1 ? new Color(0.1f, 0.75f, 0.95f) : new Color(0.95f, 0.25f, 0.3f);
+        if (image != null)
+        {
+            bool playerOneUsesGreen = GameData.isP1Green;
+            bool useGreenSprite = piece.OwnerId == 1 ? playerOneUsesGreen : !playerOneUsesGreen;
+            image.sprite = useGreenSprite ? greenStarSprite : redStarSprite;
+            image.color = Color.white;
+        }
         pieceViews.Add(piece.Id, view);
         return view;
     }

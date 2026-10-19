@@ -1114,6 +1114,8 @@ MonoBehaviour:
   boardRoot: {fileID: 1094133722}
   boardImage: {fileID: 292370783}
   piecePrefab: {fileID: 1817285319965948880, guid: 271bbee3f16429a4b904e44e22826e35, type: 3}
+  greenStarSprite: {fileID: 5227560261107205061, guid: 4d2076773bcf8bb4183a429ae27be606, type: 3}
+  redStarSprite: {fileID: -5177993671170298521, guid: 74fcc6671f13fbf48ad5ab4454115293, type: 3}
   cellWidth: 83
   cellHeight: 94
   gridOffset: {x: 0, y: -5}

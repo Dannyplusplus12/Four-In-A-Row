@@ -11,6 +11,7 @@ namespace ConnectFour.Core
 
         private readonly Piece[,] pieces = new Piece[Columns, Rows];
         private readonly List<PieceMovement> pendingMovements = new List<PieceMovement>();
+        private bool pendingTurnSwitch;
 
         public BoardState State { get; private set; } = BoardState.WaitingForInput;
         public GravityDirection Gravity { get; private set; } = GravityDirection.Down;
@@ -35,6 +36,7 @@ namespace ConnectFour.Core
             pieces[target.Column, target.Row] = piece;
             pendingMovements.Clear();
             pendingMovements.Add(new PieceMovement(piece, GetSpawnPosition(line), target));
+            pendingTurnSwitch = true;
             State = BoardState.Animating;
             return TurnResult.Accepted(new List<PieceMovement>(pendingMovements), State);
         }
@@ -47,6 +49,7 @@ namespace ConnectFour.Core
             Gravity = direction;
             pendingMovements.Clear();
             CompactBoard();
+            pendingTurnSwitch = false;
             State = BoardState.Animating;
             return TurnResult.Accepted(new List<PieceMovement>(pendingMovements), State);
         }
@@ -68,8 +71,9 @@ namespace ConnectFour.Core
             TurnResult result = TurnResult.Accepted(new List<PieceMovement>(), State);
             result.Outcome = outcome;
             result.WinnerId = WinnerId;
-            if (outcome == TurnOutcome.None)
+            if (outcome == TurnOutcome.None && pendingTurnSwitch)
                 ActivePlayerId = ActivePlayerId == 1 ? 2 : 1;
+            pendingTurnSwitch = false;
             return result;
         }
 

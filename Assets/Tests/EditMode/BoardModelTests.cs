@@ -61,6 +61,38 @@ namespace ConnectFour.Core.Tests
         }
 
         [Test]
+        public void RotatingGravityDoesNotChangeActivePlayer()
+        {
+            BoardModel board = new BoardModel();
+
+            DropAndComplete(board, 0);
+            Assert.That(board.ActivePlayerId, Is.EqualTo(2));
+
+            TurnResult rotation = board.RotateGravity(GravityDirection.Right);
+            Assert.That(rotation.Success, Is.True);
+            board.CompleteAnimation();
+
+            Assert.That(board.ActivePlayerId, Is.EqualTo(2));
+            DropAndComplete(board, 0);
+            Assert.That(board.GetPiece(new GridPosition(5, 0)).OwnerId, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RepeatedDropsAndRotationsRemainPlayable()
+        {
+            BoardModel board = new BoardModel();
+
+            for (int turn = 0; turn < 7; turn++)
+            {
+                DropAndComplete(board, turn % BoardModel.Columns);
+                TurnResult rotation = board.RotateGravity(GravityDirection.Down);
+                Assert.That(rotation.Success, Is.True, rotation.FailureReason);
+                TurnResult completed = board.CompleteAnimation();
+                Assert.That(completed.State, Is.EqualTo(BoardState.WaitingForInput));
+            }
+        }
+
+        [Test]
         public void HorizontalWinIsReportedOnlyAfterCompletion()
         {
             BoardModel board = new BoardModel();
