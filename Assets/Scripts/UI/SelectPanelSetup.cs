@@ -35,9 +35,17 @@ public class SelectPanelSetup : MonoBehaviour
 
     private void OnEnable()
     {
+        if (player1Input != null) player1Input.onValueChanged.AddListener(OnPlayerNameChanged);
+        if (player2Input != null) player2Input.onValueChanged.AddListener(OnPlayerNameChanged);
         ApplyModeSettings();
         UpdateColorDisplay();
         UpdateFirstMoveUI(animate: false);
+    }
+
+    private void OnDisable()
+    {
+        if (player1Input != null) player1Input.onValueChanged.RemoveListener(OnPlayerNameChanged);
+        if (player2Input != null) player2Input.onValueChanged.RemoveListener(OnPlayerNameChanged);
     }
 
     private void ApplyModeSettings()
@@ -54,6 +62,8 @@ public class SelectPanelSetup : MonoBehaviour
             player2Input.text = isOnePlayer ? "Computer" : "Player 2";
             player2Input.interactable = !isOnePlayer;
         }
+
+        SavePlayerSelection();
 
         if (difficultyGroup != null)
         {
@@ -76,10 +86,28 @@ public class SelectPanelSetup : MonoBehaviour
         Sprite left = GameData.isP1Green ? greenStarSprite : redStarSprite;
         Sprite right = GameData.isP1Green ? redStarSprite : greenStarSprite;
 
+        GameData.player1StarSprite = left;
+        GameData.player2StarSprite = right;
+
         if (p1ColorStar != null) p1ColorStar.sprite = left;
         if (p2ColorStar != null) p2ColorStar.sprite = right;
         if (btnSwapLeftStar != null) btnSwapLeftStar.sprite = left;
         if (btnSwapRightStar != null) btnSwapRightStar.sprite = right;
+    }
+
+    private void OnPlayerNameChanged(string value)
+    {
+        SavePlayerSelection();
+    }
+
+    public void SavePlayerSelection()
+    {
+        if (player1Input != null && !string.IsNullOrWhiteSpace(player1Input.text))
+            GameData.player1Name = player1Input.text.Trim();
+        if (player2Input != null && !string.IsNullOrWhiteSpace(player2Input.text))
+            GameData.player2Name = player2Input.text.Trim();
+        GameData.player1StarSprite = GameData.isP1Green ? greenStarSprite : redStarSprite;
+        GameData.player2StarSprite = GameData.isP1Green ? redStarSprite : greenStarSprite;
     }
 
     public void OnCycleFirstMoveClicked()

@@ -20,6 +20,29 @@ namespace ConnectFour.Core.Tests
         }
 
         [Test]
+        public void SnapshotRestoresBoardState()
+        {
+            BoardModel board = new BoardModel();
+            board.DropPiece(3);
+            board.CompleteAnimation();
+            board.DropPiece(4);
+            board.CompleteAnimation();
+            board.RotateGravity(GravityDirection.Left);
+            board.CompleteAnimation();
+
+            BoardSnapshot snapshot = board.CreateSnapshot();
+            BoardModel restored = new BoardModel();
+
+            Assert.That(restored.RestoreSnapshot(snapshot), Is.True);
+            Assert.That(restored.Gravity, Is.EqualTo(board.Gravity));
+            Assert.That(restored.ActivePlayerId, Is.EqualTo(board.ActivePlayerId));
+            for (int column = 0; column < BoardModel.Columns; column++)
+            for (int row = 0; row < BoardModel.Rows; row++)
+                Assert.That(restored.GetPiece(new GridPosition(column, row))?.OwnerId,
+                    Is.EqualTo(board.GetPiece(new GridPosition(column, row))?.OwnerId));
+        }
+
+        [Test]
         public void DropAndRotateEnterAnimatingAndBlockInput()
         {
             BoardModel board = new BoardModel();

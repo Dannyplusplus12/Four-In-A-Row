@@ -37,6 +37,27 @@ public sealed class BoardView : MonoBehaviour
         StartCoroutine(AnimateRoutine(movements, completed));
     }
 
+    public void Rebuild(BoardModel model)
+    {
+        ClearPieces();
+        for (int column = 0; column < BoardModel.Columns; column++)
+        for (int row = 0; row < BoardModel.Rows; row++)
+        {
+            GridPosition position = new GridPosition(column, row);
+            Piece piece = model.GetPiece(position);
+            if (piece == null) continue;
+            RectTransform view = GetOrCreateView(piece);
+            view.anchoredPosition = GridToAnchoredPosition(position);
+        }
+    }
+
+    public void ClearPieces()
+    {
+        foreach (RectTransform view in pieceViews.Values)
+            if (view != null) Destroy(view.gameObject);
+        pieceViews.Clear();
+    }
+
     private IEnumerator AnimateRoutine(IReadOnlyList<PieceMovement> movements, Action completed)
     {
         if (movements == null || movements.Count == 0)

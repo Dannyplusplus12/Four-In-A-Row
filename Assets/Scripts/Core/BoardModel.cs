@@ -19,6 +19,41 @@ namespace ConnectFour.Core
         public int? WinnerId { get; private set; }
         public bool IsDraw { get; private set; }
 
+        public BoardSnapshot CreateSnapshot()
+        {
+            int[] ownerIds = new int[Columns * Rows];
+            for (int column = 0; column < Columns; column++)
+            for (int row = 0; row < Rows; row++)
+                ownerIds[column * Rows + row] = pieces[column, row]?.OwnerId ?? 0;
+
+            return new BoardSnapshot(ownerIds, Gravity, ActivePlayerId);
+        }
+
+        public bool RestoreSnapshot(BoardSnapshot snapshot)
+        {
+            if (snapshot == null || snapshot.OwnerIds == null || snapshot.OwnerIds.Length != Columns * Rows)
+                return false;
+            if (snapshot.Gravity < GravityDirection.Down || snapshot.Gravity > GravityDirection.Right)
+                return false;
+
+            for (int column = 0; column < Columns; column++)
+            for (int row = 0; row < Rows; row++)
+            {
+                int ownerId = snapshot.OwnerIds[column * Rows + row];
+                if (ownerId != 0 && ownerId != 1 && ownerId != 2) return false;
+                pieces[column, row] = ownerId == 0 ? null : new RegularPiece(ownerId);
+            }
+
+            Gravity = snapshot.Gravity;
+            ActivePlayerId = snapshot.ActivePlayerId == 2 ? 2 : 1;
+            WinnerId = null;
+            IsDraw = false;
+            pendingMovements.Clear();
+            pendingTurnSwitch = false;
+            State = BoardState.WaitingForInput;
+            return true;
+        }
+
         public Piece GetPiece(GridPosition position)
         {
             return IsInside(position) ? pieces[position.Column, position.Row] : null;

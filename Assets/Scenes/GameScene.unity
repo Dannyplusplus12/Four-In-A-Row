@@ -1047,6 +1047,7 @@ GameObject:
   - component: {fileID: 1111336585}
   - component: {fileID: 1111336587}
   - component: {fileID: 1111336588}
+  - component: {fileID: 1111336589}
   m_Layer: 0
   m_Name: GameController
   m_TagString: Untagged
@@ -1166,6 +1167,22 @@ MonoBehaviour:
   - {fileID: 639663378}
   verticalInputRoot: {fileID: 1037947980}
   horizontalInputRoot: {fileID: 177340531}
+--- !u!114 &1111336589
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1111336581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b7a3d6e1f2c4a8b9d0e6f5c3b2a1d4e, type: 3}
+  m_Name: PlayerTurnView
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerTurnView
+  gameController: {fileID: 1111336584}
+  activeScale: 1.12
+  inactiveScale: 0.88
+  inactiveAlpha: 0.35
 --- !u!1 &1326186197
 GameObject:
   m_ObjectHideFlags: 0

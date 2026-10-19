@@ -6,6 +6,7 @@ public class MenuUIManager : MonoBehaviour
     [Header("Panels")]
     public GameObject mainMenuPanel;
     public GameObject selectModePanel;
+    public GameObject singlePlayerChoicePanel;
     public GameObject statsPanel;
     public GameObject optionsPanel;
 
@@ -23,7 +24,8 @@ public class MenuUIManager : MonoBehaviour
     public void OpenOnePlayerMode()
     {
         GameData.selectedMode = GameData.GameMode.OnePlayer;
-        OpenSelectPanel();
+        if (GameData.HasSavedGame) OpenSinglePlayerChoice();
+        else OpenSelectPanel();
     }
 
     public void OpenTwoPlayerMode()
@@ -46,6 +48,19 @@ public class MenuUIManager : MonoBehaviour
 
     public void StartGame()
     {
+        GameData.BeginNewGame();
+        SceneManager.LoadScene("GameScene");
+    }
+
+    public void StartNewSinglePlayerGame()
+    {
+        GameData.BeginNewGame();
+        OpenSelectPanel();
+    }
+
+    public void ResumeSinglePlayerGame()
+    {
+        GameData.RequestResume();
         SceneManager.LoadScene("GameScene");
     }
 
@@ -55,10 +70,17 @@ public class MenuUIManager : MonoBehaviour
         if (selectModePanel != null) selectModePanel.SetActive(true);
     }
 
+    private void OpenSinglePlayerChoice()
+    {
+        SetAllPanelsActive(false);
+        if (singlePlayerChoicePanel != null) singlePlayerChoicePanel.SetActive(true);
+    }
+
     private void SetAllPanelsActive(bool active)
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(active);
         if (selectModePanel != null) selectModePanel.SetActive(active);
+        if (singlePlayerChoicePanel != null) singlePlayerChoicePanel.SetActive(active);
         if (statsPanel != null) statsPanel.SetActive(active);
         if (optionsPanel != null) optionsPanel.SetActive(active);
     }
