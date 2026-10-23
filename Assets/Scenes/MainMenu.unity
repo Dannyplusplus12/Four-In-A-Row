@@ -2912,7 +2912,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 464721472}
         m_TargetAssemblyTypeName: MenuUIManager, Assembly-CSharp
         m_MethodName: OpenOnePlayerMode
         m_Mode: 1
@@ -4119,7 +4119,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 464721472}
         m_TargetAssemblyTypeName: MenuUIManager, Assembly-CSharp
         m_MethodName: StartGame
         m_Mode: 1
