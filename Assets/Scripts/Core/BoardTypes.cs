@@ -18,9 +18,21 @@ namespace ConnectFour.Core
         Right
     }
 
+    public enum BoardRuleMode
+    {
+        Classic,
+        SwipeGravity,
+        DecayAfterEightTurns,
+        RotateAfterTwoTurns,
+        BlockAfterFourTurns,
+        FiveStarWin,
+        DestroyStarOnTap
+    }
+
     public enum PieceType
     {
-        Regular
+        Regular,
+        Block
     }
 
     public enum TurnOutcome
@@ -68,6 +80,10 @@ namespace ConnectFour.Core
         public bool Success { get; }
         public string FailureReason { get; }
         public List<PieceMovement> Movements { get; }
+        public List<Piece> RemovedPieces { get; }
+        public bool RequiresRebuild { get; internal set; }
+        public bool RequiresRotation { get; internal set; }
+        public int RotationQuarterTurns { get; internal set; }
         public BoardState State { get; internal set; }
         public TurnOutcome Outcome { get; internal set; }
         public int? WinnerId { get; internal set; }
@@ -77,6 +93,7 @@ namespace ConnectFour.Core
             Success = success;
             FailureReason = failureReason;
             Movements = movements ?? new List<PieceMovement>();
+            RemovedPieces = new List<Piece>();
         }
 
         public static TurnResult Accepted(List<PieceMovement> movements, BoardState state)

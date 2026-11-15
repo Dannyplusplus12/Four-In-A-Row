@@ -7,12 +7,34 @@ public class MenuUIManager : MonoBehaviour
     public GameObject mainMenuPanel;
     public GameObject selectModePanel;
     public GameObject singlePlayerChoicePanel;
+    public GameObject gameModeSelectionPanel;
     public GameObject statsPanel;
     public GameObject optionsPanel;
 
     private void Start()
     {
-        ShowMainMenu();
+        ResolveGameModeSelectionPanel();
+
+        if (GameData.ModeSelectionRequested)
+        {
+            GameData.ClearModeSelectionRequest();
+            OpenGameModeSelection();
+        }
+        else
+        {
+            ShowMainMenu();
+        }
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) StartDebugGame(GameData.RuleMode.Classic);
+        else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) StartDebugGame(GameData.RuleMode.SwipeGravity);
+        else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) StartDebugGame(GameData.RuleMode.DecayAfterEightTurns);
+        else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4)) StartDebugGame(GameData.RuleMode.RotateAfterTwoTurns);
+        else if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5)) StartDebugGame(GameData.RuleMode.BlockAfterFourTurns);
+        else if (Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6)) StartDebugGame(GameData.RuleMode.FiveStarWin);
+        else if (Input.GetKeyDown(KeyCode.Alpha7) || Input.GetKeyDown(KeyCode.Keypad7)) StartDebugGame(GameData.RuleMode.DestroyStarOnTap);
     }
 
     public void ShowMainMenu()
@@ -24,8 +46,7 @@ public class MenuUIManager : MonoBehaviour
     public void OpenOnePlayerMode()
     {
         GameData.selectedMode = GameData.GameMode.OnePlayer;
-        if (GameData.HasSavedGame) OpenSinglePlayerChoice();
-        else OpenSelectPanel();
+        OpenGameModeSelection();
     }
 
     public void OpenTwoPlayerMode()
@@ -48,6 +69,20 @@ public class MenuUIManager : MonoBehaviour
 
     public void StartGame()
     {
+        GameData.selectedMode = GameData.GameMode.TwoPlayer;
+        GameData.selectedRuleMode = GameData.RuleMode.Classic;
+        GameData.selectedModeTitle = "Classic";
+        GameData.selectedModeDescription = GameData.GetRuleInstruction();
+        GameData.BeginNewGame();
+        SceneManager.LoadScene("GameScene");
+    }
+
+    private void StartDebugGame(GameData.RuleMode ruleMode)
+    {
+        GameData.selectedMode = GameData.GameMode.OnePlayer;
+        GameData.selectedRuleMode = ruleMode;
+        GameData.selectedModeTitle = ruleMode.ToString();
+        GameData.selectedModeDescription = GameData.GetRuleInstruction();
         GameData.BeginNewGame();
         SceneManager.LoadScene("GameScene");
     }
@@ -55,7 +90,7 @@ public class MenuUIManager : MonoBehaviour
     public void StartNewSinglePlayerGame()
     {
         GameData.BeginNewGame();
-        OpenSelectPanel();
+        OpenGameModeSelection();
     }
 
     public void ResumeSinglePlayerGame()
@@ -76,12 +111,34 @@ public class MenuUIManager : MonoBehaviour
         if (singlePlayerChoicePanel != null) singlePlayerChoicePanel.SetActive(true);
     }
 
+    public void OpenGameModeSelection()
+    {
+        SetAllPanelsActive(false);
+        if (gameModeSelectionPanel != null) gameModeSelectionPanel.SetActive(true);
+    }
+
     private void SetAllPanelsActive(bool active)
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(active);
         if (selectModePanel != null) selectModePanel.SetActive(active);
         if (singlePlayerChoicePanel != null) singlePlayerChoicePanel.SetActive(active);
+        if (gameModeSelectionPanel != null) gameModeSelectionPanel.SetActive(active);
         if (statsPanel != null) statsPanel.SetActive(active);
         if (optionsPanel != null) optionsPanel.SetActive(active);
+    }
+
+    private void ResolveGameModeSelectionPanel()
+    {
+        if (gameModeSelectionPanel != null) return;
+
+        GameModeSelectionUI selectionUI = FindFirstObjectByType<GameModeSelectionUI>(FindObjectsInactive.Include);
+        if (selectionUI != null)
+        {
+            gameModeSelectionPanel = selectionUI.gameObject;
+            return;
+        }
+
+        GameObject panel = GameObject.Find("GameModeSelectionPanel");
+        if (panel != null) gameModeSelectionPanel = panel;
     }
 }

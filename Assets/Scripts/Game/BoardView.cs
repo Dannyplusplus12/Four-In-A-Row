@@ -18,6 +18,7 @@ public sealed class BoardView : MonoBehaviour
     [SerializeField] private float gravity = 1800f;
     [SerializeField] private float minimumDuration = 0.12f;
     [SerializeField] private float bounceHeight = 8f;
+    [SerializeField] private float ruleEffectDuration = 0.35f;
 
     private readonly Dictionary<Guid, RectTransform> pieceViews = new Dictionary<Guid, RectTransform>();
 
@@ -56,6 +57,80 @@ public sealed class BoardView : MonoBehaviour
         foreach (RectTransform view in pieceViews.Values)
             if (view != null) Destroy(view.gameObject);
         pieceViews.Clear();
+    }
+
+    public void SetRotationQuarterTurns(int quarterTurns)
+    {
+        if (boardRoot != null)
+            boardRoot.localRotation = Quaternion.Euler(0f, 0f, quarterTurns * 90f);
+    }
+
+    public void AnimateRuleEffects(TurnResult result, Action completed)
+    {
+        StartCoroutine(AnimateRuleEffectsRoutine(result, completed));
+    }
+
+    private IEnumerator AnimateRuleEffectsRoutine(TurnResult result, Action completed)
+    {
+        if (result == null)
+        {
+            completed?.Invoke();
+            yield break;
+        }
+
+        List<AnimationData> movements = new List<AnimationData>(result.Movements.Count);
+        foreach (PieceMovement movement in result.Movements)
+        {
+            if (!pieceViews.TryGetValue(movement.Piece.Id, out RectTransform view))
+                view = GetOrCreateView(movement.Piece);
+            Vector2 from = GridToAnchoredPosition(movement.From);
+            Vector2 to = GridToAnchoredPosition(movement.To);
+            view.anchoredPosition = from;
+            movements.Add(new AnimationData(view, from, to, Vector2.Distance(from, to)));
+        }
+
+        List<FadeData> removals = new List<FadeData>(result.RemovedPieces.Count);
+        foreach (Piece piece in result.RemovedPieces)
+        {
+            if (!pieceViews.TryGetValue(piece.Id, out RectTransform view)) continue;
+            CanvasGroup canvasGroup = view.GetComponent<CanvasGroup>();
+            if (canvasGroup == null) canvasGroup = view.gameObject.AddComponent<CanvasGroup>();
+            removals.Add(new FadeData(piece, view, canvasGroup));
+        }
+
+        Quaternion startRotation = boardRoot == null ? Quaternion.identity : boardRoot.localRotation;
+        Quaternion targetRotation = result.RequiresRotation
+            ? Quaternion.Euler(0f, 0f, result.RotationQuarterTurns * 90f)
+            : startRotation;
+        float elapsed = 0f;
+        while (elapsed < ruleEffectDuration)
+        {
+            elapsed += Time.deltaTime;
+            float normalized = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, ruleEffectDuration));
+            float eased = normalized * normalized * (3f - 2f * normalized);
+            for (int index = 0; index < movements.Count; index++)
+            {
+                AnimationData movement = movements[index];
+                movement.View.anchoredPosition = Vector2.Lerp(movement.From, movement.To, eased);
+            }
+            for (int index = 0; index < removals.Count; index++)
+            {
+                FadeData removal = removals[index];
+                removal.CanvasGroup.alpha = 1f - eased;
+                removal.View.localScale = Vector3.one * (1f - eased * 0.2f);
+            }
+            if (boardRoot != null)
+                boardRoot.localRotation = Quaternion.Slerp(startRotation, targetRotation, eased);
+            yield return null;
+        }
+
+        for (int index = 0; index < removals.Count; index++)
+        {
+            FadeData removal = removals[index];
+            pieceViews.Remove(removal.Piece.Id);
+            if (removal.View != null) Destroy(removal.View.gameObject);
+        }
+        completed?.Invoke();
     }
 
     private IEnumerator AnimateRoutine(IReadOnlyList<PieceMovement> movements, Action completed)
@@ -121,9 +196,15 @@ public sealed class BoardView : MonoBehaviour
         if (image != null)
         {
             bool playerOneUsesGreen = GameData.isP1Green;
+            bool isBlock = piece.Type == PieceType.Block;
             bool useGreenSprite = piece.OwnerId == 1 ? playerOneUsesGreen : !playerOneUsesGreen;
-            image.sprite = useGreenSprite ? greenStarSprite : redStarSprite;
-            image.color = Color.white;
+            image.sprite = isBlock ? greenStarSprite : useGreenSprite ? greenStarSprite : redStarSprite;
+            image.color = isBlock ? new Color(0.35f, 0.35f, 0.35f) : Color.white;
+
+            BoardPieceInput input = image.gameObject.GetComponent<BoardPieceInput>();
+            if (input == null) input = image.gameObject.AddComponent<BoardPieceInput>();
+            input.Initialize(piece, FindFirstObjectByType<GameController>());
+            image.raycastTarget = true;
         }
         pieceViews.Add(piece.Id, view);
         return view;
@@ -153,6 +234,20 @@ public sealed class BoardView : MonoBehaviour
             Distance = distance;
             IsDrop = from != to;
             BounceDirection = IsDrop ? -(to - from).normalized : Vector2.zero;
+        }
+    }
+
+    private sealed class FadeData
+    {
+        public readonly Piece Piece;
+        public readonly RectTransform View;
+        public readonly CanvasGroup CanvasGroup;
+
+        public FadeData(Piece piece, RectTransform view, CanvasGroup canvasGroup)
+        {
+            Piece = piece;
+            View = view;
+            CanvasGroup = canvasGroup;
         }
     }
 }

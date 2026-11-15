@@ -25,12 +25,12 @@ public sealed class GravityInputView : MonoBehaviour
     private void Start()
     {
         ApplyGravity(gameController == null ? currentGravity : gameController.CurrentGravity);
-        if (gravitySensor != null) gravitySensor.GravityChanged += ApplyGravity;
+        if (gameController != null) gameController.GravityChanged += ApplyGravity;
     }
 
     private void OnDisable()
     {
-        if (gravitySensor != null) gravitySensor.GravityChanged -= ApplyGravity;
+        if (gameController != null) gameController.GravityChanged -= ApplyGravity;
     }
 
     private void BindButtons(Button[] buttons)

@@ -26,4 +26,11 @@ namespace ConnectFour.Core
         {
         }
     }
+
+    public sealed class BlockPiece : Piece
+    {
+        public BlockPiece() : base(0, PieceType.Block)
+        {
+        }
+    }
 }

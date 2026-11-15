@@ -169,6 +169,119 @@ namespace ConnectFour.Core.Tests
             Assert.That(completed.WinnerId, Is.EqualTo(1));
         }
 
+        [Test]
+        public void DecayModeRemovesOldestPieceOnNinthPiecePerPlayer()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.DecayAfterEightTurns);
+            Piece oldest = null;
+
+            for (int turn = 0; turn < 18; turn++)
+            {
+                TurnResult drop = board.DropPiece(turn % BoardModel.Columns);
+                if (turn == 0) oldest = drop.Movements[0].Piece;
+                board.CompleteAnimation();
+            }
+
+            for (int column = 0; column < BoardModel.Columns; column++)
+            for (int row = 0; row < BoardModel.Rows; row++)
+                Assert.That(board.GetPiece(new GridPosition(column, row)), Is.Not.SameAs(oldest));
+        }
+
+        [Test]
+        public void RotateModeChangesGravityAfterBotFourthTurn()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.RotateAfterTwoTurns);
+
+            TurnResult completed = null;
+            for (int turn = 0; turn < 8; turn++)
+            {
+                TurnResult drop = board.DropPiece(turn % BoardModel.Columns);
+                Assert.That(drop.Success, Is.True);
+                completed = board.CompleteAnimation();
+            }
+
+            Assert.That(board.Gravity, Is.EqualTo(GravityDirection.Left));
+            Assert.That(board.RotationQuarterTurns, Is.EqualTo(1));
+            Assert.That(completed.RequiresRebuild, Is.True);
+        }
+
+        [Test]
+        public void BlockModeAddsOnlyOneFixedBlockAfterFourTurns()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.BlockAfterFourTurns);
+
+            for (int turn = 0; turn < 4; turn++)
+                DropAndComplete(board, turn);
+
+            int blockCount = 0;
+            for (int column = 0; column < BoardModel.Columns; column++)
+            for (int row = 0; row < BoardModel.Rows; row++)
+                if (board.GetPiece(new GridPosition(column, row))?.Type == PieceType.Block)
+                    blockCount++;
+
+            Assert.That(blockCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void BlockModePlacesBlockAtBottomOfSelectedColumn()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.BlockAfterFourTurns);
+
+            for (int turn = 0; turn < 4; turn++)
+                DropAndComplete(board, turn);
+
+            GridPosition blockPosition = default(GridPosition);
+            for (int column = 0; column < BoardModel.Columns; column++)
+            for (int row = 0; row < BoardModel.Rows; row++)
+                if (board.GetPiece(new GridPosition(column, row))?.Type == PieceType.Block)
+                    blockPosition = new GridPosition(column, row);
+
+            TurnResult drop = board.DropPiece(blockPosition.Column);
+            Assert.That(drop.Success, Is.True);
+            board.CompleteAnimation();
+
+            Piece pieceAboveBlock = board.GetPiece(new GridPosition(blockPosition.Column, blockPosition.Row + 1));
+            Assert.That(pieceAboveBlock, Is.Not.Null);
+            Assert.That(pieceAboveBlock.Type, Is.EqualTo(PieceType.Regular));
+        }
+
+        [Test]
+        public void OtherModesDoNotAddBlocks()
+        {
+            BoardRuleMode[] modes =
+            {
+                BoardRuleMode.Classic,
+                BoardRuleMode.SwipeGravity,
+                BoardRuleMode.DecayAfterEightTurns,
+                BoardRuleMode.RotateAfterTwoTurns,
+                BoardRuleMode.FiveStarWin,
+                BoardRuleMode.DestroyStarOnTap
+            };
+
+            foreach (BoardRuleMode mode in modes)
+            {
+                BoardModel board = new BoardModel(mode);
+                for (int turn = 0; turn < 4; turn++)
+                    DropAndComplete(board, turn);
+
+                for (int column = 0; column < BoardModel.Columns; column++)
+                for (int row = 0; row < BoardModel.Rows; row++)
+                    Assert.That(board.GetPiece(new GridPosition(column, row))?.Type, Is.Not.EqualTo(PieceType.Block), mode.ToString());
+            }
+        }
+
+        [Test]
+        public void PlayerTwoCanDropWithoutQueueIndexError()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.DecayAfterEightTurns);
+
+            DropAndComplete(board, 0);
+            TurnResult playerTwoDrop = board.DropPiece(1);
+
+            Assert.That(playerTwoDrop.Success, Is.True);
+            Assert.That(() => board.CompleteAnimation(), Throws.Nothing);
+        }
+
         private static void DropAndComplete(BoardModel board, int line)
         {
             TurnResult result = board.DropPiece(line);

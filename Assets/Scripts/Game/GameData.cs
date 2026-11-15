@@ -17,8 +17,22 @@ public static class GameData
         Random = 2
     }
 
+    public enum RuleMode
+    {
+        Classic,
+        SwipeGravity,
+        DecayAfterEightTurns,
+        RotateAfterTwoTurns,
+        BlockAfterFourTurns,
+        FiveStarWin,
+        DestroyStarOnTap
+    }
+
     // Chế độ chơi hiện tại
-    public static GameMode selectedMode = GameMode.TwoPlayer;
+    public static GameMode selectedMode = GameMode.OnePlayer;
+    public static RuleMode selectedRuleMode = RuleMode.Classic;
+    public static string selectedModeTitle = "Classic";
+    public static string selectedModeDescription = "Tap a line to drop a piece";
 
     // Màu của Player 1 (true: Xanh, false: Đỏ)
     public static bool isP1Green = true;
@@ -36,6 +50,7 @@ public static class GameData
     public static Sprite player2StarSprite;
 
     public static bool ResumeRequested { get; private set; }
+    public static bool ModeSelectionRequested { get; private set; }
     public static bool HasSavedGame => PlayerPrefs.HasKey(SavedGameKey);
 
     public static void BeginNewGame()
@@ -46,6 +61,8 @@ public static class GameData
 
     public static void RequestResume() => ResumeRequested = true;
     public static void ClearResumeRequest() => ResumeRequested = false;
+    public static void RequestModeSelection() => ModeSelectionRequested = true;
+    public static void ClearModeSelectionRequest() => ModeSelectionRequested = false;
 
     public static void SaveGame(ConnectFour.Core.BoardSnapshot snapshot)
     {
@@ -82,6 +99,25 @@ public static class GameData
     {
         PlayerPrefs.DeleteKey(SavedGameKey);
         PlayerPrefs.Save();
+    }
+
+    public static ConnectFour.Core.BoardRuleMode GetCoreRuleMode()
+    {
+        return (ConnectFour.Core.BoardRuleMode)selectedRuleMode;
+    }
+
+    public static string GetRuleInstruction()
+    {
+        switch (selectedRuleMode)
+        {
+            case RuleMode.SwipeGravity: return "Swipe to change gravity (counts as a turn)";
+            case RuleMode.DecayAfterEightTurns: return "Your oldest piece disappears after 8 turns";
+            case RuleMode.RotateAfterTwoTurns: return "Board rotates after each player's 4th turn";
+            case RuleMode.BlockAfterFourTurns: return "A fixed block appears after every 4 turns";
+            case RuleMode.FiveStarWin: return "Connect 5 stars to win";
+            case RuleMode.DestroyStarOnTap: return "Tap any star to destroy it; this counts as a turn";
+            default: return "Tap a line to drop a piece";
+        }
     }
 
     [System.Serializable]

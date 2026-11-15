@@ -5,6 +5,16 @@ using UnityEngine.UI;
 public sealed class PlayerTurnView : MonoBehaviour
 {
     [SerializeField] private GameController gameController;
+
+    [Header("HUD Roots")]
+    [SerializeField] private GameObject singlePlayerHUD;
+    [SerializeField] private GameObject multiplayerHUD;
+
+    [Header("Single Player Mode Info")]
+    [SerializeField] private TMP_Text singlePlayerModeTitle;
+    [SerializeField] private TMP_Text singlePlayerModeDescription;
+    [SerializeField] private TMP_Text singlePlayerTurnTitle;
+
     [Header("Player 1 UI")]
     [SerializeField] private RectTransform playerOneRoot;
     [SerializeField] private Image playerOneStar;
@@ -32,6 +42,7 @@ public sealed class PlayerTurnView : MonoBehaviour
 
     private void Start()
     {
+        ConfigureHud();
         if (gameController != null) Refresh(gameController.Model.ActivePlayerId);
     }
 
@@ -42,7 +53,15 @@ public sealed class PlayerTurnView : MonoBehaviour
 
     private void Refresh(int activePlayerId)
     {
-        if (playerOneRoot != null && playerOneStar != null && playerOneText != null)
+        bool isSinglePlayer = GameData.selectedMode == GameData.GameMode.OnePlayer;
+        if (isSinglePlayer)
+        {
+            if (playerOneRoot != null) playerOneRoot.gameObject.SetActive(false);
+            if (singlePlayerTurnTitle != null)
+                singlePlayerTurnTitle.text = activePlayerId == 1 ? "Lượt của bạn" : "Lượt đối thủ";
+        }
+
+        if (!isSinglePlayer && playerOneRoot != null && playerOneStar != null && playerOneText != null)
         {
             playerOneText.text = GameData.player1Name;
             playerOneStar.sprite = GameData.player1StarSprite;
@@ -55,6 +74,27 @@ public sealed class PlayerTurnView : MonoBehaviour
             playerTwoStar.sprite = GameData.player2StarSprite;
             SetPlayerState(playerTwoRoot, playerTwoStar, playerTwoText, activePlayerId == 2);
         }
+    }
+
+    private void ConfigureHud()
+    {
+        bool isSinglePlayer = GameData.selectedMode == GameData.GameMode.OnePlayer;
+        SetHudActive(singlePlayerHUD, isSinglePlayer);
+        SetHudActive(multiplayerHUD, !isSinglePlayer);
+
+        if (!isSinglePlayer) return;
+
+        if (singlePlayerModeTitle != null)
+            singlePlayerModeTitle.text = GameData.selectedModeTitle;
+        if (singlePlayerModeDescription != null)
+            singlePlayerModeDescription.text = GameData.selectedModeDescription;
+        if (playerOneRoot != null) playerOneRoot.gameObject.SetActive(false);
+    }
+
+    private void SetHudActive(GameObject hud, bool active)
+    {
+        if (hud != null && hud != gameObject)
+            hud.SetActive(active);
     }
 
     private void SetPlayerState(RectTransform root, Image star, TMP_Text text, bool active)

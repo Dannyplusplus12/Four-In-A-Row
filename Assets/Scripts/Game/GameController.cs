@@ -1,5 +1,6 @@
 using ConnectFour.Core;
 using System;
+using System.Collections;
 using UnityEngine;
 
 public sealed class GameController : MonoBehaviour
@@ -10,29 +11,47 @@ public sealed class GameController : MonoBehaviour
     public BoardModel Model { get; private set; }
     public GravityDirection CurrentGravity => Model == null ? GravityDirection.Down : Model.Gravity;
     public bool IsPaused { get; private set; }
+    public bool IsSinglePlayer => GameData.selectedMode == GameData.GameMode.OnePlayer;
+    public bool IsBotTurn => IsSinglePlayer && Model != null && Model.ActivePlayerId == 2;
+    public string CurrentRuleInstruction => GameData.GetRuleInstruction();
     public event Action<int> TurnChanged;
+    public event Action<GravityDirection> GravityChanged;
+    public event Action<string> RuleInstructionChanged;
+    public event Action<TurnResult> GameOver;
 
     private bool hasQueuedGravity;
     private GravityDirection queuedGravity;
+    private bool isPresentingRuleEffect;
 
     private void Awake()
     {
-        Model = new BoardModel();
+        Model = new BoardModel(GameData.GetCoreRuleMode());
         if (gravitySensor == null) gravitySensor = GetComponent<GravitySensorController>();
         if (gravitySensor != null) gravitySensor.GravityChanged += HandleGravityChanged;
+        if (GameData.selectedRuleMode == GameData.RuleMode.SwipeGravity &&
+            GetComponent<SwipeInputController>() == null)
+            gameObject.AddComponent<SwipeInputController>();
+        if (IsSinglePlayer && GetComponent<RuleInstructionView>() == null)
+            gameObject.AddComponent<RuleInstructionView>();
     }
 
     private void Start()
     {
-        if (!GameData.ResumeRequested) return;
-
-        BoardSnapshot snapshot = GameData.LoadSavedGame();
-        if (snapshot != null && Model.RestoreSnapshot(snapshot))
+        if (GameData.ResumeRequested)
         {
-            boardView?.Rebuild(Model);
-            TurnChanged?.Invoke(Model.ActivePlayerId);
+            BoardSnapshot snapshot = GameData.LoadSavedGame();
+            if (snapshot != null && Model.RestoreSnapshot(snapshot))
+            {
+                boardView?.Rebuild(Model);
+                boardView?.SetRotationQuarterTurns(Model.RotationQuarterTurns);
+                TurnChanged?.Invoke(Model.ActivePlayerId);
+            }
         }
         GameData.ClearResumeRequest();
+        boardView?.SetRotationQuarterTurns(Model.RotationQuarterTurns);
+        GravityChanged?.Invoke(Model.Gravity);
+        RuleInstructionChanged?.Invoke(CurrentRuleInstruction);
+        BeginBotTurnIfNeeded();
     }
 
     private void OnDestroy()
@@ -42,14 +61,15 @@ public sealed class GameController : MonoBehaviour
 
     public void DropPiece(int line)
     {
-        if (IsPaused || Model == null || boardView == null) return;
+        if (IsPaused || isPresentingRuleEffect || IsBotTurn || Model == null || boardView == null) return;
         TurnResult result = Model.DropPiece(line);
         if (result.Success) boardView.Animate(result.Movements, CompleteAnimation);
     }
 
     public void RotateGravity(GravityDirection direction)
     {
-        if (IsPaused || Model == null || boardView == null) return;
+        if (IsPaused || isPresentingRuleEffect || IsBotTurn || Model == null || boardView == null ||
+            GameData.selectedRuleMode != GameData.RuleMode.SwipeGravity) return;
         if (Model.State == BoardState.Animating)
         {
             queuedGravity = direction;
@@ -57,18 +77,51 @@ public sealed class GameController : MonoBehaviour
             return;
         }
         TurnResult result = Model.RotateGravity(direction);
-        if (result.Success) boardView.Animate(result.Movements, CompleteAnimation);
+        if (result.Success)
+        {
+            GravityChanged?.Invoke(Model.Gravity);
+            boardView.Animate(result.Movements, CompleteAnimation);
+        }
+    }
+
+    public void RemovePiece(Piece piece)
+    {
+        if (IsPaused || isPresentingRuleEffect || IsBotTurn || Model == null || boardView == null) return;
+        TurnResult result = Model.RemovePiece(piece);
+        if (result.Success) boardView.AnimateRuleEffects(result, CompleteAnimation);
     }
 
     private void HandleGravityChanged(GravityDirection direction)
     {
+        if (GameData.selectedRuleMode != GameData.RuleMode.SwipeGravity) return;
         RotateGravity(direction);
     }
 
     private void CompleteAnimation()
     {
-        Model.CompleteAnimation();
+        TurnResult completed = Model.CompleteAnimation();
+        if (completed.RequiresRebuild)
+        {
+            isPresentingRuleEffect = true;
+            boardView.AnimateRuleEffects(completed, () => FinishCompletedTurn(completed));
+            return;
+        }
+        FinishCompletedTurn(completed);
+    }
+
+    private void FinishCompletedTurn(TurnResult completed)
+    {
+        if (completed.RequiresRebuild)
+        {
+            boardView.Rebuild(Model);
+            boardView.SetRotationQuarterTurns(Model.RotationQuarterTurns);
+            if (completed.RequiresRotation)
+                GravityChanged?.Invoke(Model.Gravity);
+            isPresentingRuleEffect = false;
+        }
         TurnChanged?.Invoke(Model.ActivePlayerId);
+        if (completed.Outcome != TurnOutcome.None)
+            GameOver?.Invoke(completed);
         if (Model.State == BoardState.GameOver)
             GameData.ClearSavedGame();
         else
@@ -78,6 +131,7 @@ public sealed class GameController : MonoBehaviour
             hasQueuedGravity = false;
             RotateGravity(queuedGravity);
         }
+        BeginBotTurnIfNeeded();
     }
 
     public void SetPaused(bool paused)
@@ -91,14 +145,43 @@ public sealed class GameController : MonoBehaviour
     {
         GameData.BeginNewGame();
         IsPaused = false;
-        Model = new BoardModel();
+        Model = new BoardModel(GameData.GetCoreRuleMode());
         boardView?.ClearPieces();
+        boardView?.SetRotationQuarterTurns(0);
+        GravityChanged?.Invoke(Model.Gravity);
         TurnChanged?.Invoke(Model.ActivePlayerId);
+        RuleInstructionChanged?.Invoke(CurrentRuleInstruction);
+        BeginBotTurnIfNeeded();
     }
 
     public void SaveProgress()
     {
         if (Model != null && Model.State == BoardState.WaitingForInput)
             GameData.SaveGame(Model.CreateSnapshot());
+    }
+
+    private void BeginBotTurnIfNeeded()
+    {
+        if (IsBotTurn && Model.State == BoardState.WaitingForInput)
+            StartCoroutine(BotTurnRoutine());
+    }
+
+    private IEnumerator BotTurnRoutine()
+    {
+        yield return new WaitForSeconds(0.35f);
+        if (IsPaused || !IsBotTurn || Model.State != BoardState.WaitingForInput) yield break;
+
+        int lineCount = Model.Gravity == GravityDirection.Down || Model.Gravity == GravityDirection.Up
+            ? BoardModel.Columns
+            : BoardModel.Rows;
+        int start = UnityEngine.Random.Range(0, lineCount);
+        for (int offset = 0; offset < lineCount; offset++)
+        {
+            int line = (start + offset) % lineCount;
+            TurnResult result = Model.DropPiece(line);
+            if (!result.Success) continue;
+            boardView.Animate(result.Movements, CompleteAnimation);
+            yield break;
+        }
     }
 }
