@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public sealed class PlayerTurnView : MonoBehaviour
+public class PlayerTurnView : MonoBehaviour
 {
     [SerializeField] private GameController gameController;
 

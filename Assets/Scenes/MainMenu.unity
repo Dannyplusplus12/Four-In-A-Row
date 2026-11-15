@@ -1918,7 +1918,7 @@ MonoBehaviour:
   mainMenuPanel: {fileID: 2032776339}
   selectModePanel: {fileID: 679641316}
   singlePlayerChoicePanel: {fileID: 325717107}
-  gameModeSelectionPanel: {fileID: 0}
+  gameModeSelectionPanel: {fileID: 415214585}
   statsPanel: {fileID: 0}
   optionsPanel: {fileID: 1320162039}
 --- !u!4 &464721473
