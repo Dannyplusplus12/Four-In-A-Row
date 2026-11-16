@@ -45,12 +45,14 @@ public class MenuUIManager : MonoBehaviour
 
     public void OpenOnePlayerMode()
     {
+        GameData.ClearResumeRequest();
         GameData.selectedMode = GameData.GameMode.OnePlayer;
-        OpenGameModeSelection();
+        OpenSinglePlayerChoice();
     }
 
     public void OpenTwoPlayerMode()
     {
+        GameData.ClearResumeRequest();
         GameData.selectedMode = GameData.GameMode.TwoPlayer;
         OpenSelectPanel();
     }
@@ -69,12 +71,8 @@ public class MenuUIManager : MonoBehaviour
 
     public void StartGame()
     {
-        GameData.selectedMode = GameData.GameMode.TwoPlayer;
-        GameData.selectedRuleMode = GameData.RuleMode.Classic;
-        GameData.selectedModeTitle = "Classic";
-        GameData.selectedModeDescription = GameData.GetRuleInstruction();
-        GameData.BeginNewGame();
-        SceneManager.LoadScene("GameScene");
+        FindFirstObjectByType<SelectPanelSetup>()?.SavePlayerSelection();
+        OpenGameModeSelection();
     }
 
     private void StartDebugGame(GameData.RuleMode ruleMode)
@@ -89,14 +87,16 @@ public class MenuUIManager : MonoBehaviour
 
     public void StartNewSinglePlayerGame()
     {
+        GameData.ClearResumeRequest();
         GameData.BeginNewGame();
         OpenGameModeSelection();
     }
 
     public void ResumeSinglePlayerGame()
     {
+        GameData.selectedMode = GameData.GameMode.OnePlayer;
         GameData.RequestResume();
-        SceneManager.LoadScene("GameScene");
+        OpenSelectPanel();
     }
 
     private void OpenSelectPanel()
@@ -105,7 +105,7 @@ public class MenuUIManager : MonoBehaviour
         if (selectModePanel != null) selectModePanel.SetActive(true);
     }
 
-    private void OpenSinglePlayerChoice()
+    public void OpenSinglePlayerChoice()
     {
         SetAllPanelsActive(false);
         if (singlePlayerChoicePanel != null) singlePlayerChoicePanel.SetActive(true);

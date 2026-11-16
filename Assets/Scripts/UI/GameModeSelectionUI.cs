@@ -10,6 +10,7 @@ public sealed class GameModeSelectionUI : MonoBehaviour
         public GameData.RuleMode ruleMode;
         public string title;
         [TextArea] public string subtitle;
+        [Range(1, 3)] public int difficulty = 1;
     }
 
     [SerializeField] private ModeDefinition[] modes;
@@ -33,18 +34,18 @@ public sealed class GameModeSelectionUI : MonoBehaviour
         foreach (ModeDefinition mode in modes)
         {
             GameModeItemUI item = Instantiate(modeItemPrefab, modeItemContainer).GetComponent<GameModeItemUI>();
-            if (item != null) item.Setup(mode.title, mode.subtitle, mode.ruleMode, this);
+            if (item != null) item.Setup(mode.title, mode.subtitle, mode.ruleMode, mode.difficulty, this);
         }
     }
 
     public void SelectMode(GameData.RuleMode ruleMode, int difficulty, string title, string description)
     {
-        GameData.selectedMode = GameData.GameMode.OnePlayer;
         GameData.selectedRuleMode = ruleMode;
         GameData.difficultyLevel = difficulty;
         GameData.selectedModeTitle = title;
         GameData.selectedModeDescription = description;
-        GameData.BeginNewGame();
+        if (!GameData.ResumeRequested)
+            GameData.BeginNewGame();
         SceneManager.LoadScene(gameScene);
     }
 }

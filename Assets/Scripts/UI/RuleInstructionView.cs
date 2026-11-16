@@ -49,7 +49,7 @@ public sealed class RuleInstructionView : MonoBehaviour
     private void HandleTurnChanged(int activePlayerId)
     {
         if (instructionText == null || gameController == null || !gameController.IsSinglePlayer) return;
-        instructionText.text = activePlayerId == 2
+        instructionText.text = activePlayerId == 1
             ? "Bot is thinking..."
             : gameController.CurrentRuleInstruction;
     }

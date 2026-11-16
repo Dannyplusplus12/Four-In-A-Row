@@ -12,7 +12,7 @@ public sealed class GameController : MonoBehaviour
     public GravityDirection CurrentGravity => Model == null ? GravityDirection.Down : Model.Gravity;
     public bool IsPaused { get; private set; }
     public bool IsSinglePlayer => GameData.selectedMode == GameData.GameMode.OnePlayer;
-    public bool IsBotTurn => IsSinglePlayer && Model != null && Model.ActivePlayerId == 2;
+    public bool IsBotTurn => IsSinglePlayer && Model != null && Model.ActivePlayerId == 1;
     public string CurrentRuleInstruction => GameData.GetRuleInstruction();
     public event Action<int> TurnChanged;
     public event Action<GravityDirection> GravityChanged;
@@ -31,8 +31,6 @@ public sealed class GameController : MonoBehaviour
         if (GameData.selectedRuleMode == GameData.RuleMode.SwipeGravity &&
             GetComponent<SwipeInputController>() == null)
             gameObject.AddComponent<SwipeInputController>();
-        if (IsSinglePlayer && GetComponent<RuleInstructionView>() == null)
-            gameObject.AddComponent<RuleInstructionView>();
     }
 
     private void Start()
@@ -53,6 +51,23 @@ public sealed class GameController : MonoBehaviour
         RuleInstructionChanged?.Invoke(CurrentRuleInstruction);
         BeginBotTurnIfNeeded();
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.W))
+            TriggerDebugGameOver(true);
+        else if (Input.GetKeyDown(KeyCode.L))
+            TriggerDebugGameOver(false);
+    }
+
+    private void TriggerDebugGameOver(bool playerWon)
+    {
+        TurnResult result = TurnResult.DebugGameOver(playerWon);
+        Debug.Log(playerWon ? "Debug game over: WIN (W)" : "Debug game over: LOSS (L)");
+        GameOver?.Invoke(result);
+    }
+#endif
 
     private void OnDestroy()
     {

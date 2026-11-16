@@ -105,5 +105,15 @@ namespace ConnectFour.Core
         {
             return new TurnResult(false, reason, new List<PieceMovement>()) { State = state };
         }
+
+        public static TurnResult DebugGameOver(bool playerWon)
+        {
+            return new TurnResult(true, null, new List<PieceMovement>())
+            {
+                State = BoardState.GameOver,
+                Outcome = TurnOutcome.Win,
+                WinnerId = playerWon ? 2 : 1
+            };
+        }
     }
 }

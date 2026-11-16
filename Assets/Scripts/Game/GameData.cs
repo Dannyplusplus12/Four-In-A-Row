@@ -3,6 +3,7 @@ using UnityEngine;
 public static class GameData
 {
     private const string SavedGameKey = "connect_four_saved_game";
+    private const string TotalStarsKey = "connect_four_total_stars";
 
     public enum GameMode
     {
@@ -52,6 +53,14 @@ public static class GameData
     public static bool ResumeRequested { get; private set; }
     public static bool ModeSelectionRequested { get; private set; }
     public static bool HasSavedGame => PlayerPrefs.HasKey(SavedGameKey);
+    public static int TotalStars => PlayerPrefs.GetInt(TotalStarsKey, 0);
+
+    public static void AddStars(int amount)
+    {
+        if (amount <= 0) return;
+        PlayerPrefs.SetInt(TotalStarsKey, TotalStars + amount);
+        PlayerPrefs.Save();
+    }
 
     public static void BeginNewGame()
     {

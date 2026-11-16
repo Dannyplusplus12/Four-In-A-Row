@@ -12,12 +12,12 @@ public sealed class GameModeItemUI : MonoBehaviour
     [SerializeField] private Button selectButton;
     private int difficulty;
 
-    public void Setup(string title, string subtitle, GameData.RuleMode ruleMode, GameModeSelectionUI owner)
+    public void Setup(string title, string subtitle, GameData.RuleMode ruleMode, int configuredDifficulty, GameModeSelectionUI owner)
     {
         if (titleText != null) titleText.text = title;
         if (subtitleText != null) subtitleText.text = subtitle;
 
-        difficulty = Random.Range(1, 4);
+        difficulty = Mathf.Clamp(configuredDifficulty, 1, difficultyStars.Length);
         for (int index = 0; index < difficultyStars.Length; index++)
         {
             if (difficultyStars[index] == null) continue;

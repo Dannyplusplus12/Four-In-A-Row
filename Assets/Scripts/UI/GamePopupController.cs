@@ -16,6 +16,7 @@ public sealed class GamePopupController : MonoBehaviour
     [SerializeField] private float panelShakeDuration = 0.45f;
     [SerializeField] private float panelShakeAngle = 5f;
     [SerializeField] private float continueDelay = 1f;
+    [SerializeField] private WinStarRewardAnimator winStarRewardAnimator;
 
     private Coroutine popupAnimation;
 
@@ -23,6 +24,10 @@ public sealed class GamePopupController : MonoBehaviour
     {
         if (gameController == null) gameController = GetComponent<GameController>();
         if (gameController == null) gameController = FindFirstObjectByType<GameController>();
+        if (winStarRewardAnimator == null) winStarRewardAnimator = GetComponent<WinStarRewardAnimator>();
+        if (winStarRewardAnimator == null)
+            winStarRewardAnimator = FindFirstObjectByType<WinStarRewardAnimator>(FindObjectsInactive.Include);
+        Debug.Log($"GamePopupController reward animator: {(winStarRewardAnimator == null ? "NULL" : winStarRewardAnimator.name)}");
         if (gameController != null) gameController.GameOver += HandleGameOver;
         ClosePopup();
     }
@@ -37,14 +42,29 @@ public sealed class GamePopupController : MonoBehaviour
         bool isWinOrDraw = result.Outcome == TurnOutcome.Win || result.Outcome == TurnOutcome.Draw;
         bool playerWon = isWinOrDraw &&
             (result.Outcome == TurnOutcome.Draw ||
-             GameData.selectedMode == GameData.GameMode.TwoPlayer || result.WinnerId == 1);
+             GameData.selectedMode == GameData.GameMode.TwoPlayer || result.WinnerId == 2);
         bool playerLost = result.Outcome == TurnOutcome.Win &&
-            GameData.selectedMode == GameData.GameMode.OnePlayer && result.WinnerId == 2;
+            GameData.selectedMode == GameData.GameMode.OnePlayer && result.WinnerId == 1;
         if (winPanel != null) winPanel.SetActive(playerWon);
         if (lossPanel != null) lossPanel.SetActive(playerLost);
         if (drawPanel != null) drawPanel.SetActive(false);
         OpenPopup();
+        if (playerWon)
+            PlayWinReward();
         PlayResultAnimation(playerWon ? winPanel : lossPanel);
+    }
+
+    private void PlayWinReward()
+    {
+        int reward = Mathf.Clamp(GameData.difficultyLevel, 1, 3);
+        Debug.Log($"Win reward: {reward} star(s) required by difficulty {GameData.difficultyLevel}.");
+        if (winStarRewardAnimator != null)
+            winStarRewardAnimator.PlayReward(reward);
+        else
+        {
+            Debug.LogError("No WinStarRewardAnimator found; awarding stars without animation.");
+            GameData.AddStars(reward);
+        }
     }
 
     public void OpenPopup()

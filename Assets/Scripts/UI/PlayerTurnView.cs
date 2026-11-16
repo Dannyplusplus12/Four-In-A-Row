@@ -58,7 +58,7 @@ public class PlayerTurnView : MonoBehaviour
         {
             if (playerOneRoot != null) playerOneRoot.gameObject.SetActive(false);
             if (singlePlayerTurnTitle != null)
-                singlePlayerTurnTitle.text = activePlayerId == 1 ? "Lượt của bạn" : "Lượt đối thủ";
+                singlePlayerTurnTitle.text = activePlayerId == 2 ? "Lượt của bạn" : "Lượt đối thủ";
         }
 
         if (!isSinglePlayer && playerOneRoot != null && playerOneStar != null && playerOneText != null)

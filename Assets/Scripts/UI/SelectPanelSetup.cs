@@ -23,6 +23,8 @@ public class SelectPanelSetup : MonoBehaviour
     public Sprite redStarSprite;
 
     [Header("First Move Stars")]
+    public GameObject firstMoveGroup;
+    public GameObject firstMoveText;
     public RectTransform p1TurnStar;
     public RectTransform p2TurnStar;
     public RectTransform randomTurnStar;
@@ -64,6 +66,11 @@ public class SelectPanelSetup : MonoBehaviour
         }
 
         SavePlayerSelection();
+
+        if (firstMoveGroup != null)
+            firstMoveGroup.SetActive(!GameData.ResumeRequested);
+        if (firstMoveText != null)
+            firstMoveText.SetActive(!GameData.ResumeRequested);
 
         if (difficultyGroup != null)
         {
