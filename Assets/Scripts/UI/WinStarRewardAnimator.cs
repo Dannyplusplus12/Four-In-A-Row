@@ -22,16 +22,53 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
     [SerializeField] private int maxRewardStars = 3;
     [SerializeField] private int requiredStarsToWin = GameData.DefaultRequiredStarsToWin;
 
+    [Header("Impact Pop & Burst")]
+    [SerializeField] private RectTransform targetStarIcon;
+    [SerializeField] private float popScaleMultiplier = 1.35f;
+    [SerializeField] private float popDuration = 0.22f;
+    [SerializeField] private Sprite burstParticleSprite;
+    [SerializeField] private Color burstColorPrimary = new Color(1f, 0.85f, 0.15f, 1f);
+    [SerializeField] private Color burstColorSecondary = new Color(1f, 0.96f, 0.55f, 1f);
+    [SerializeField] private int burstParticleCount = 12;
+    [SerializeField] private float burstDuration = 0.4f;
+    [SerializeField] private Vector2 burstSpeedRange = new Vector2(140f, 320f);
+    [SerializeField] private Vector2 burstSizeRange = new Vector2(22f, 40f);
+
     private Image sourceImage;
     private Coroutine rewardRoutine;
+    private Coroutine popRoutine;
+    private Vector3 targetBaseScale = Vector3.one;
+    private bool hasTargetBaseScale;
+    private Sprite runtimeBurstSprite;
+    private int pendingStarsToAward;
 
     private void Awake()
     {
         if (rewardSource != null)
             sourceImage = rewardSource.GetComponent<Image>();
 
+        ResolveTargetStarIcon();
         HideSourceStar();
         RefreshTotalStarsText();
+    }
+
+    private void OnDisable()
+    {
+        if (pendingStarsToAward > 0)
+        {
+            GameData.AddStars(pendingStarsToAward);
+            pendingStarsToAward = 0;
+            RefreshTotalStarsText();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (runtimeBurstSprite != null)
+        {
+            Destroy(runtimeBurstSprite.texture);
+            Destroy(runtimeBurstSprite);
+        }
     }
 
     public void PlayReward(int starCount, System.Action onComplete = null)
@@ -56,10 +93,12 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
             return;
         }
 
+        ResolveTargetStarIcon();
         HideSourceStar();
         if (rewardRoutine != null)
             StopCoroutine(rewardRoutine);
 
+        pendingStarsToAward += clampedStarCount;
         rewardRoutine = StartCoroutine(PlayRewardRoutine(clampedStarCount, onComplete));
     }
 
@@ -100,8 +139,13 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
         if (flyDuration > 0f)
             yield return new WaitForSecondsRealtime(flyDuration);
 
-        GameData.AddStars(starCount);
-        RefreshTotalStarsText();
+        if (pendingStarsToAward > 0)
+        {
+            GameData.AddStars(pendingStarsToAward);
+            pendingStarsToAward = 0;
+            RefreshTotalStarsText();
+        }
+
         rewardRoutine = null;
         onComplete?.Invoke();
     }
@@ -188,8 +232,9 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
 
     private IEnumerator AnimateStarRoutine(RectTransform starTransform)
     {
+        RectTransform impactTarget = GetImpactTarget();
         Vector3 startPosition = starTransform.position;
-        Vector3 targetPosition = rewardTarget.position;
+        Vector3 targetPosition = impactTarget != null ? impactTarget.position : rewardTarget.position;
         Vector3 startScale = starTransform.localScale;
         float elapsed = 0f;
 
@@ -204,5 +249,202 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
         }
 
         Destroy(starTransform.gameObject);
+        HandleStarArrived(targetPosition);
+    }
+
+    private void HandleStarArrived(Vector3 impactPosition)
+    {
+        if (pendingStarsToAward > 0)
+        {
+            pendingStarsToAward--;
+            GameData.AddStars(1);
+            RefreshTotalStarsText();
+        }
+
+        TriggerTargetPop();
+        SpawnImpactBurst(impactPosition);
+    }
+
+    private void ResolveTargetStarIcon()
+    {
+        if (targetStarIcon == null && rewardTarget != null)
+        {
+            Transform starChild = rewardTarget.Find("Star");
+            if (starChild != null)
+                targetStarIcon = starChild as RectTransform;
+        }
+
+        RectTransform impactTarget = GetImpactTarget();
+        if (impactTarget != null && !hasTargetBaseScale)
+        {
+            targetBaseScale = impactTarget.localScale;
+            hasTargetBaseScale = true;
+        }
+    }
+
+    private RectTransform GetImpactTarget()
+    {
+        return targetStarIcon != null ? targetStarIcon : rewardTarget;
+    }
+
+    private void TriggerTargetPop()
+    {
+        RectTransform impactTarget = GetImpactTarget();
+        if (impactTarget == null) return;
+
+        if (!hasTargetBaseScale)
+        {
+            targetBaseScale = impactTarget.localScale;
+            hasTargetBaseScale = true;
+        }
+
+        if (popRoutine != null)
+            StopCoroutine(popRoutine);
+        popRoutine = StartCoroutine(PopTargetRoutine(impactTarget));
+    }
+
+    private IEnumerator PopTargetRoutine(RectTransform target)
+    {
+        float halfDuration = Mathf.Max(0.01f, popDuration * 0.38f);
+        float settleDuration = Mathf.Max(0.01f, popDuration - halfDuration);
+        Vector3 peakScale = targetBaseScale * popScaleMultiplier;
+
+        float elapsed = 0f;
+        while (elapsed < halfDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / halfDuration);
+            float eased = 1f - Mathf.Pow(1f - t, 2f);
+            target.localScale = Vector3.LerpUnclamped(targetBaseScale, peakScale, eased);
+            yield return null;
+        }
+
+        elapsed = 0f;
+        while (elapsed < settleDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / settleDuration);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            target.localScale = Vector3.LerpUnclamped(peakScale, targetBaseScale, eased);
+            yield return null;
+        }
+
+        target.localScale = targetBaseScale;
+        popRoutine = null;
+    }
+
+    private void SpawnImpactBurst(Vector3 worldPosition)
+    {
+        Transform parent = GetEffectContainer();
+        if (parent == null) return;
+
+        Sprite sprite = burstParticleSprite != null ? burstParticleSprite : GetOrCreateBurstSprite();
+        int count = Mathf.Max(1, burstParticleCount);
+
+        for (int index = 0; index < count; index++)
+        {
+            GameObject go = new GameObject(
+                "StarImpactParticle",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.position = worldPosition;
+
+            float size = Random.Range(burstSizeRange.x, burstSizeRange.y);
+            rt.sizeDelta = new Vector2(size, size);
+
+            LayoutElement layout = go.GetComponent<LayoutElement>();
+            layout.ignoreLayout = true;
+
+            Image img = go.GetComponent<Image>();
+            img.sprite = sprite;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            Color color = Color.Lerp(burstColorPrimary, burstColorSecondary, Random.value);
+            img.color = color;
+
+            float angle = (index / (float)count) * Mathf.PI * 2f + Random.Range(-0.25f, 0.25f);
+            float speed = Random.Range(burstSpeedRange.x, burstSpeedRange.y);
+            Vector2 velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * speed;
+
+            StartCoroutine(AnimateBurstParticleRoutine(rt, img, color, velocity));
+        }
+    }
+
+    private IEnumerator AnimateBurstParticleRoutine(RectTransform rt, Image img, Color baseColor, Vector2 velocity)
+    {
+        Vector3 startScale = rt.localScale;
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.05f, burstDuration);
+
+        while (elapsed < duration)
+        {
+            float dt = Time.unscaledDeltaTime;
+            elapsed += dt;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            // Exponential drag so particles burst out fast and settle smoothly.
+            float damping = Mathf.Exp(-4.5f * t);
+            rt.position += (Vector3)(velocity * damping * dt);
+            rt.localScale = Vector3.Lerp(startScale, startScale * 0.25f, t);
+
+            Color c = baseColor;
+            c.a = baseColor.a * (1f - t * t);
+            img.color = c;
+
+            yield return null;
+        }
+
+        Destroy(rt.gameObject);
+    }
+
+    private Transform GetEffectContainer()
+    {
+        if (rewardContainer != null && rewardContainer != rewardTarget &&
+            rewardContainer.GetComponent<Mask>() == null &&
+            rewardContainer.GetComponent<RectMask2D>() == null)
+            return rewardContainer;
+
+        if (rewardTarget != null && rewardTarget.parent != null)
+            return rewardTarget.parent;
+
+        return rewardSource != null ? rewardSource.parent : null;
+    }
+
+    private Sprite GetOrCreateBurstSprite()
+    {
+        if (runtimeBurstSprite != null) return runtimeBurstSprite;
+
+        const int size = 32;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        float center = (size - 1) * 0.5f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x - center) / center;
+                float dy = (y - center) / center;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float alpha = Mathf.Clamp01(1f - dist);
+                alpha = alpha * alpha;
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
+        tex.Apply();
+        runtimeBurstSprite = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
+        return runtimeBurstSprite;
     }
 }

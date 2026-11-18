@@ -1685,34 +1685,31 @@ MonoBehaviour:
   modes:
   - ruleMode: 0
     title: The Emperor
-    subtitle: "Lu\u1EADt c\u1ED5 \u0111i\u1EC3n, th\u1EA3 qu\xE2n xu\u1ED1ng c\u1ED9t."
+    subtitle: Classic rules, drop pieces into columns.
     difficulty: 0
   - ruleMode: 1
     title: Wheel of Fortune
-    subtitle: "Vu\u1ED1t \u0111\u1EC3 \u0111\u1ED5i h\u01B0\u1EDBng tr\u1ECDng l\u1EF1c."
+    subtitle: Swipe to change gravity direction.
     difficulty: 0
   - ruleMode: 2
     title: Death
-    subtitle: "Qu\xE2n c\u0169 nh\u1EA5t bi\u1EBFn m\u1EA5t sau 8 l\u01B0\u1EE3t."
+    subtitle: Oldest piece disappears after 8 turns.
     difficulty: 3
   - ruleMode: 3
     title: The World
-    subtitle: "B\xE0n c\u1EDD xoay sau m\u1ED7i 4 l\u01B0\u1EE3t."
+    subtitle: Board rotates every 4 turns.
     difficulty: 0
   - ruleMode: 4
     title: The Tower
-    subtitle: "M\u1ED9t ch\u01B0\u1EDBng ng\u1EA1i xu\u1EA5t hi\u1EC7n m\u1ED7i 4
-      l\u01B0\u1EE3t."
+    subtitle: An obstacle appears every 4 turns.
     difficulty: 2
   - ruleMode: 5
     title: The Star
-    subtitle: "Ch\u1EA1m v\xE0o sao \u0111\u1EC3 ph\xE1 h\u1EE7y, t\xEDnh m\u1ED9t
-      l\u01B0\u1EE3t."
+    subtitle: Tap a star to destroy it, counts as a turn.
     difficulty: 2
   - ruleMode: 6
     title: The Magician
-    subtitle: "Ch\u1EA1m v\xE0o sao \u0111\u1EC3 ph\xE1 h\u1EE7y, t\xEDnh m\u1ED9t
-      l\u01B0\u1EE3t."
+    subtitle: Tap a star to destroy it, counts as a turn.
     difficulty: 3
   modeItemPrefab: {fileID: 7964427671279324767, guid: 20a6cb1806bfa564dbc8986b2f0eebbe, type: 3}
   modeItemContainer: {fileID: 140288886}

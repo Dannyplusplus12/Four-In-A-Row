@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 public sealed class GamePopupController : MonoBehaviour
 {
     [SerializeField] private GameObject popupPanel;
+    [SerializeField] private GameObject settingsPanel;
     [SerializeField] private GameObject winPanel;
     [SerializeField] private GameObject lossPanel;
     [SerializeField] private GameObject drawPanel;
@@ -73,6 +74,13 @@ public sealed class GamePopupController : MonoBehaviour
         if (gameController != null) gameController.SetPaused(true);
     }
 
+    public void OpenSettingsPopup()
+    {
+        if (popupPanel != null && popupPanel.activeSelf) return;
+        if (settingsPanel != null) settingsPanel.SetActive(true);
+        if (gameController != null) gameController.SetPaused(true);
+    }
+
     public void ResumeGame()
     {
         if (gameController != null) gameController.SetPaused(false);
@@ -111,6 +119,7 @@ public sealed class GamePopupController : MonoBehaviour
             popupAnimation = null;
         }
         if (popupPanel != null) popupPanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
         if (winPanel != null) winPanel.SetActive(false);
         if (lossPanel != null) lossPanel.SetActive(false);
         if (drawPanel != null) drawPanel.SetActive(false);

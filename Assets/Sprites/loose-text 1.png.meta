@@ -1,10 +1,19 @@
 fileFormatVersion: 2
-guid: b5a56779be9d3ff488d049e73a17ae25
+guid: b2e07f125cc525343b88270ca1b0ba8e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7280912353192858701
-    second: win-text_0
+      213: -7902582610343094901
+    second: loose-text 1_0
+  - first:
+      213: 3870471354561659077
+    second: loose-text 1_1
+  - first:
+      213: -1465161006198395143
+    second: loose-text 1_2
+  - first:
+      213: 1277870072094485560
+    second: loose-text 1_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +135,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: win-text_0
+      name: loose-text 1_0
       rect:
         serializedVersion: 2
-        x: 2
-        y: 2
-        width: 1149
-        height: 519
+        x: 0
+        y: 0
+        width: 2752
+        height: 1536
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +150,74 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3bbaf2b6ac005fa90800000000000000
-      internalID: -7280912353192858701
+      spriteID: b85125e4cf2645290800000000000000
+      internalID: -7902582610343094901
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: loose-text 1_1
+      rect:
+        serializedVersion: 2
+        x: 1261
+        y: 1306
+        width: 122
+        height: 147
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c009f9b03da6b530800000000000000
+      internalID: 3870471354561659077
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: loose-text 1_2
+      rect:
+        serializedVersion: 2
+        x: 2035
+        y: 1305
+        width: 81
+        height: 115
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9fe6aced3d3baabe0800000000000000
+      internalID: -1465161006198395143
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: loose-text 1_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 687
+        width: 68
+        height: 124
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 83c6b446f08ebb110800000000000000
+      internalID: 1277870072094485560
       vertices: []
       indices: 
       edges: []
@@ -161,7 +236,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      win-text_0: -7280912353192858701
+      loose-text 1_0: -7902582610343094901
+      loose-text 1_1: 3870471354561659077
+      loose-text 1_2: -1465161006198395143
+      loose-text 1_3: 1277870072094485560
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
