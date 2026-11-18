@@ -13,6 +13,8 @@ public sealed class GameController : MonoBehaviour
     public bool IsPaused { get; private set; }
     public bool IsSinglePlayer => GameData.selectedMode == GameData.GameMode.OnePlayer;
     public bool IsBotTurn => IsSinglePlayer && Model != null && Model.ActivePlayerId == 1;
+    public bool CanAcceptPlayerInput => !IsPaused && !isPresentingRuleEffect && !IsBotTurn &&
+                                        Model != null && Model.State == BoardState.WaitingForInput && boardView != null;
     public string CurrentRuleInstruction => GameData.GetRuleInstruction();
     public event Action<int> TurnChanged;
     public event Action<GravityDirection> GravityChanged;

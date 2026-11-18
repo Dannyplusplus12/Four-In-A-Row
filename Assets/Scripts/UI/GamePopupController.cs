@@ -27,7 +27,7 @@ public sealed class GamePopupController : MonoBehaviour
         if (winStarRewardAnimator == null) winStarRewardAnimator = GetComponent<WinStarRewardAnimator>();
         if (winStarRewardAnimator == null)
             winStarRewardAnimator = FindFirstObjectByType<WinStarRewardAnimator>(FindObjectsInactive.Include);
-        Debug.Log($"GamePopupController reward animator: {(winStarRewardAnimator == null ? "NULL" : winStarRewardAnimator.name)}");
+        winStarRewardAnimator?.RefreshTotalStarsText();
         if (gameController != null) gameController.GameOver += HandleGameOver;
         ClosePopup();
     }

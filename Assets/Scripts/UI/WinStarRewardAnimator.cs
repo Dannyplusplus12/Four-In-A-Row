@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,25 +11,31 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
     [SerializeField] private Transform rewardContainer;
     [SerializeField] private Sprite rewardSprite;
     [SerializeField] private TMP_Text totalStarsText;
+    [SerializeField] private float fadeInDelay = 0.3f;
+    [SerializeField] private float fadeInDuration = 0.35f;
+    [SerializeField] private float sourceHoldDuration = 0.6f;
     [SerializeField] private float flyDuration = 0.65f;
     [SerializeField] private float staggerDelay = 0.12f;
+    [SerializeField] private float starSpacing = 110f;
     [SerializeField] private float rewardScale = 1f;
     [SerializeField] private Vector2 fallbackRewardSize = new Vector2(64f, 64f);
-    [SerializeField] private float sourceHoldDuration = 0.35f;
     [SerializeField] private int maxRewardStars = 3;
+    [SerializeField] private int requiredStarsToWin = GameData.DefaultRequiredStarsToWin;
 
     private Image sourceImage;
+    private Coroutine rewardRoutine;
 
     private void Awake()
     {
         if (rewardSource != null)
             sourceImage = rewardSource.GetComponent<Image>();
+
+        HideSourceStar();
+        RefreshTotalStarsText();
     }
 
     public void PlayReward(int starCount, System.Action onComplete = null)
     {
-        Debug.Log($"PlayReward called: count={starCount}, source={Describe(rewardSource)}, " +
-            $"target={Describe(rewardTarget)}, sprite={(rewardSprite == null ? "NULL" : rewardSprite.name)}");
         RefreshTotalStarsText();
         int clampedStarCount = Mathf.Clamp(starCount, 0, maxRewardStars);
         if (clampedStarCount == 0)
@@ -49,41 +56,54 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
             return;
         }
 
-        ShowSourceStar();
+        HideSourceStar();
+        if (rewardRoutine != null)
+            StopCoroutine(rewardRoutine);
 
-        StartCoroutine(PlayRewardRoutine(clampedStarCount, onComplete));
+        rewardRoutine = StartCoroutine(PlayRewardRoutine(clampedStarCount, onComplete));
     }
 
     private IEnumerator PlayRewardRoutine(int starCount, System.Action onComplete)
     {
-        yield return new WaitForSecondsRealtime(sourceHoldDuration);
-        HideSourceStar();
+        List<Image> spawnedStars = CreateRewardStars(starCount);
 
-        for (int index = 0; index < starCount; index++)
+        if (fadeInDelay > 0f)
+            yield return new WaitForSecondsRealtime(fadeInDelay);
+
+        if (fadeInDuration > 0f)
         {
-            CreateAndAnimateStar();
-            if (index < starCount - 1)
+            float elapsed = 0f;
+            while (elapsed < fadeInDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float alpha = Mathf.Clamp01(elapsed / fadeInDuration);
+                SetStarsAlpha(spawnedStars, alpha);
+                yield return null;
+            }
+        }
+
+        SetStarsAlpha(spawnedStars, 1f);
+
+        if (sourceHoldDuration > 0f)
+            yield return new WaitForSecondsRealtime(sourceHoldDuration);
+
+        for (int index = 0; index < spawnedStars.Count; index++)
+        {
+            Image starImage = spawnedStars[index];
+            if (starImage != null)
+                StartCoroutine(AnimateStarRoutine(starImage.rectTransform));
+
+            if (index < spawnedStars.Count - 1 && staggerDelay > 0f)
                 yield return new WaitForSecondsRealtime(staggerDelay);
         }
 
-        yield return new WaitForSecondsRealtime(flyDuration);
+        if (flyDuration > 0f)
+            yield return new WaitForSecondsRealtime(flyDuration);
+
         GameData.AddStars(starCount);
         RefreshTotalStarsText();
+        rewardRoutine = null;
         onComplete?.Invoke();
-    }
-
-    private void ShowSourceStar()
-    {
-        if (sourceImage == null)
-        {
-            sourceImage = rewardSource.gameObject.AddComponent<Image>();
-            Debug.Log("Created source Image component on rewardSource.");
-        }
-
-        sourceImage.sprite = rewardSprite;
-        sourceImage.preserveAspect = true;
-        sourceImage.enabled = true;
-        rewardSource.localScale = Vector3.one * rewardScale;
     }
 
     private void HideSourceStar()
@@ -92,52 +112,78 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
             sourceImage.enabled = false;
     }
 
-    private static string Describe(RectTransform target)
+    public void RefreshTotalStarsText()
     {
-        if (target == null) return "NULL";
-        return $"{target.name} active={target.gameObject.activeInHierarchy} size={target.rect.size}";
+        if (totalStarsText == null) return;
+        int targetStars = requiredStarsToWin > 0 ? requiredStarsToWin : GameData.RequiredStarsToWin;
+        totalStarsText.text = $"{GameData.TotalStars}/{targetStars}";
     }
 
-    private void RefreshTotalStarsText()
+    private List<Image> CreateRewardStars(int starCount)
     {
-        if (totalStarsText != null)
-            totalStarsText.text = GameData.TotalStars.ToString();
-    }
-
-    private void CreateAndAnimateStar()
-    {
-        GameObject starObject = new GameObject(
-            "RewardStar",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(Image),
-            typeof(LayoutElement));
+        List<Image> stars = new List<Image>(starCount);
         Transform parent = rewardSource.parent;
         if (rewardContainer != null && rewardContainer != rewardTarget && rewardContainer.GetComponent<Mask>() == null &&
             rewardContainer.GetComponent<RectMask2D>() == null)
             parent = rewardContainer;
-        starObject.transform.SetParent(parent, false);
 
-        RectTransform starTransform = starObject.GetComponent<RectTransform>();
-        Image starImage = starObject.GetComponent<Image>();
-        LayoutElement layoutElement = starObject.GetComponent<LayoutElement>();
-        starImage.sprite = rewardSprite;
-        starImage.preserveAspect = true;
-        layoutElement.ignoreLayout = true;
-        starTransform.anchorMin = new Vector2(0.5f, 0.5f);
-        starTransform.anchorMax = new Vector2(0.5f, 0.5f);
-        starTransform.pivot = new Vector2(0.5f, 0.5f);
         Vector2 rewardSize = rewardSource.rect.size;
         if (rewardSize.x <= 0f || rewardSize.y <= 0f)
             rewardSize = fallbackRewardSize;
-        starTransform.sizeDelta = rewardSize;
-        starTransform.position = rewardSource.position;
-        starTransform.localScale = Vector3.one * rewardScale;
 
-        Debug.Log($"RewardStar created: parent={parent.name}, source={rewardSource.position}, " +
-            $"target={rewardTarget.position}, size={starTransform.sizeDelta}, sprite={rewardSprite.name}");
+        float centerOffset = (starCount - 1) * 0.5f;
+        Vector3 rightAxis = rewardSource.right;
+        float worldScaleX = rewardSource.lossyScale.x;
 
-        StartCoroutine(AnimateStarRoutine(starTransform));
+        for (int index = 0; index < starCount; index++)
+        {
+            GameObject starObject = new GameObject(
+                $"RewardStar_{index + 1}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(LayoutElement));
+            starObject.transform.SetParent(parent, false);
+
+            RectTransform starTransform = starObject.GetComponent<RectTransform>();
+            Image starImage = starObject.GetComponent<Image>();
+            LayoutElement layoutElement = starObject.GetComponent<LayoutElement>();
+
+            starImage.sprite = rewardSprite;
+            starImage.preserveAspect = true;
+            starImage.raycastTarget = false;
+            SetStarAlpha(starImage, 0f);
+            layoutElement.ignoreLayout = true;
+
+            starTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            starTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            starTransform.pivot = new Vector2(0.5f, 0.5f);
+            starTransform.sizeDelta = rewardSize;
+
+            float offsetX = (index - centerOffset) * starSpacing * worldScaleX;
+            starTransform.position = rewardSource.position + rightAxis * offsetX;
+            starTransform.localScale = Vector3.one * rewardScale;
+
+            stars.Add(starImage);
+        }
+
+        return stars;
+    }
+
+    private static void SetStarsAlpha(List<Image> stars, float alpha)
+    {
+        for (int index = 0; index < stars.Count; index++)
+        {
+            if (stars[index] != null)
+                SetStarAlpha(stars[index], alpha);
+        }
+    }
+
+    private static void SetStarAlpha(Image image, float alpha)
+    {
+        Color color = image.color;
+        color.a = alpha;
+        image.color = color;
     }
 
     private IEnumerator AnimateStarRoutine(RectTransform starTransform)

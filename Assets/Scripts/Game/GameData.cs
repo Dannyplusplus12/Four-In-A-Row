@@ -54,6 +54,13 @@ public static class GameData
     public static bool ModeSelectionRequested { get; private set; }
     public static bool HasSavedGame => PlayerPrefs.HasKey(SavedGameKey);
     public static int TotalStars => PlayerPrefs.GetInt(TotalStarsKey, 0);
+    public const int DefaultRequiredStarsToWin = 30;
+    public static int RequiredStarsToWin { get; private set; } = DefaultRequiredStarsToWin;
+
+    public static void SetRequiredStarsToWin(int requiredStars)
+    {
+        RequiredStarsToWin = Mathf.Max(1, requiredStars);
+    }
 
     public static void AddStars(int amount)
     {

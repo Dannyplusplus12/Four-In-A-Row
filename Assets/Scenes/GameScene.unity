@@ -205,12 +205,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 86
+  m_fontSize: 68
   m_fontSizeBase: 86
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 36
+  m_fontSizeMax: 68
   m_fontStyle: 0
   m_HorizontalAlignment: 4
   m_VerticalAlignment: 256
@@ -673,11 +673,16 @@ MonoBehaviour:
   rewardContainer: {fileID: 1558998617}
   rewardSprite: {fileID: 6826052366161179044, guid: 9255051a601cce24ba4acc967ceefc03, type: 3}
   totalStarsText: {fileID: 139727611}
+  fadeInDelay: 0.3
+  fadeInDuration: 0.35
+  sourceHoldDuration: 0.6
   flyDuration: 0.65
   staggerDelay: 0.12
+  starSpacing: 110
   rewardScale: 1
   fallbackRewardSize: {x: 64, y: 64}
   maxRewardStars: 3
+  requiredStarsToWin: 30
 --- !u!1 &400000011
 GameObject:
   m_ObjectHideFlags: 0
@@ -2343,6 +2348,9 @@ MonoBehaviour:
   - {fileID: 639663378}
   verticalInputRoot: {fileID: 1037947980}
   horizontalInputRoot: {fileID: 177340531}
+  hoverHighlight: {fileID: 2078201811}
+  dragOutMargin: 60
+  matchButtonSize: 0
 --- !u!114 &1111336589
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4508,6 +4516,8 @@ GameObject:
   - component: {fileID: 2078201811}
   - component: {fileID: 2078201813}
   - component: {fileID: 2078201812}
+  - component: {fileID: 2078201814}
+  - component: {fileID: 2078201815}
   m_Layer: 5
   m_Name: HoverColumnHighlight
   m_TagString: Untagged
@@ -4532,7 +4542,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -613, y: 0}
-  m_SizeDelta: {x: 75, y: 1100}
+  m_SizeDelta: {x: 100, y: 800}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2078201812
 MonoBehaviour:
@@ -4548,7 +4558,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 0.58431375}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -4572,6 +4582,43 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2078201810}
   m_CullTransparentMesh: 1
+--- !u!114 &2078201814
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2078201810}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3312d7739989d2b4e91e6319e9a96d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
+  m_Padding: {x: 0, y: 0, z: 0, w: 0}
+  m_Softness: {x: 0, y: 0}
+--- !u!114 &2078201815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2078201810}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d04171f3a113194d97445acbd63f6b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColumnHighlightEnergyStream
+  particleSprite: {fileID: 0}
+  primaryColor: {r: 0.55, g: 0.92, b: 1, a: 0.85}
+  secondaryColor: {r: 1, g: 1, b: 1, a: 0.95}
+  sizeRange: {x: 10, y: 22}
+  verticalStretchRange: {x: 1.5, y: 2.6}
+  particleCount: 26
+  speedRange: {x: 300, y: 520}
+  horizontalPadding: 10
+  swayAmplitude: 5
+  swayFrequency: 2.5
+  edgeFadeRatio: 0.18
 --- !u!1 &2088768220
 GameObject:
   m_ObjectHideFlags: 0
