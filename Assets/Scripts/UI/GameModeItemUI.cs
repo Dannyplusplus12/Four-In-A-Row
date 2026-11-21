@@ -17,18 +17,26 @@ public sealed class GameModeItemUI : MonoBehaviour
         if (titleText != null) titleText.text = title;
         if (subtitleText != null) subtitleText.text = subtitle;
 
-        difficulty = Mathf.Clamp(configuredDifficulty, 1, difficultyStars.Length);
-        for (int index = 0; index < difficultyStars.Length; index++)
+        int maxStars = difficultyStars != null && difficultyStars.Length > 0 ? difficultyStars.Length : 3;
+        difficulty = Mathf.Clamp(configuredDifficulty, 1, maxStars);
+        bool showDifficultyStars = GameData.selectedMode == GameData.GameMode.OnePlayer;
+        if (difficultyStars != null)
         {
-            if (difficultyStars[index] == null) continue;
-            difficultyStars[index].sprite = index < difficulty ? filledStarSprite : emptyStarSprite;
-            difficultyStars[index].enabled = true;
+            for (int index = 0; index < difficultyStars.Length; index++)
+            {
+                if (difficultyStars[index] == null) continue;
+                difficultyStars[index].gameObject.SetActive(showDifficultyStars);
+                if (!showDifficultyStars) continue;
+                difficultyStars[index].sprite = index < difficulty ? filledStarSprite : emptyStarSprite;
+                difficultyStars[index].enabled = true;
+            }
         }
 
         if (selectButton != null)
         {
             selectButton.onClick.RemoveAllListeners();
-            selectButton.onClick.AddListener(() => owner.SelectMode(ruleMode, difficulty, title, subtitle));
+            if (owner != null)
+                selectButton.onClick.AddListener(() => owner.SelectMode(ruleMode, difficulty, title, subtitle));
         }
     }
 }

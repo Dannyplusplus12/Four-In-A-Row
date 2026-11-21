@@ -1,3 +1,4 @@
+using ConnectFour.Core;
 using TMPro;
 using UnityEngine;
 
@@ -9,7 +10,6 @@ public sealed class RuleInstructionView : MonoBehaviour
     private void Awake()
     {
         if (gameController == null) gameController = FindFirstObjectByType<GameController>();
-        if (instructionText == null) instructionText = CreateRuntimeLabel();
     }
 
     private void OnEnable()
@@ -17,14 +17,14 @@ public sealed class RuleInstructionView : MonoBehaviour
         if (gameController != null)
         {
             gameController.RuleInstructionChanged += Refresh;
-            gameController.TurnChanged += HandleTurnChanged;
+            gameController.TurnChanged += HandleTurnOrGravityChanged;
+            gameController.GravityChanged += HandleGravityChanged;
         }
     }
 
     private void Start()
     {
         Refresh(gameController == null ? string.Empty : gameController.CurrentRuleInstruction);
-        HandleTurnChanged(gameController == null ? 1 : gameController.Model.ActivePlayerId);
     }
 
     private void OnDisable()
@@ -32,47 +32,51 @@ public sealed class RuleInstructionView : MonoBehaviour
         if (gameController != null)
         {
             gameController.RuleInstructionChanged -= Refresh;
-            gameController.TurnChanged -= HandleTurnChanged;
+            gameController.TurnChanged -= HandleTurnOrGravityChanged;
+            gameController.GravityChanged -= HandleGravityChanged;
         }
+    }
+
+    private void HandleTurnOrGravityChanged(int _)
+    {
+        Refresh(gameController == null ? string.Empty : gameController.CurrentRuleInstruction);
+    }
+
+    private void HandleGravityChanged(GravityDirection _)
+    {
+        Refresh(gameController == null ? string.Empty : gameController.CurrentRuleInstruction);
     }
 
     private void Refresh(string instruction)
     {
-        bool visible = gameController != null && gameController.IsSinglePlayer;
-        if (instructionText != null)
+        if (instructionText == null) return;
+        bool visible = gameController != null && !string.IsNullOrEmpty(instruction);
+        instructionText.gameObject.SetActive(visible);
+        if (!visible) return;
+
+        string suffix = BuildTelemetrySuffix();
+        instructionText.text = string.IsNullOrEmpty(suffix) ? instruction : $"{instruction}\n{suffix}";
+    }
+
+    private string BuildTelemetrySuffix()
+    {
+        if (gameController == null || gameController.Model == null) return string.Empty;
+        BoardModel model = gameController.Model;
+
+        switch (model.RuleMode)
         {
-            instructionText.gameObject.SetActive(visible);
-            instructionText.text = instruction;
+            case BoardRuleMode.SwipeGravity:
+                return $"Gravity: {model.Gravity}";
+            case BoardRuleMode.RotateAfterTwoTurns:
+                int p1Left = Mathf.Max(0, 4 - model.GetPlayerTurnCount(1));
+                int p2Left = Mathf.Max(0, 4 - model.GetPlayerTurnCount(2));
+                int turnsLeft = p1Left + p2Left;
+                return turnsLeft > 0 ? $"Rotates in {turnsLeft} turn(s)" : "Rotating next!";
+            case BoardRuleMode.BlockAfterFourTurns:
+                int untilBlock = 4 - (model.TotalTurnCount % 4);
+                return $"Next block in {untilBlock} turn(s)";
+            default:
+                return string.Empty;
         }
-    }
-
-    private void HandleTurnChanged(int activePlayerId)
-    {
-        if (instructionText == null || gameController == null || !gameController.IsSinglePlayer) return;
-        instructionText.text = activePlayerId == 1
-            ? "Bot is thinking..."
-            : gameController.CurrentRuleInstruction;
-    }
-
-    private static TMP_Text CreateRuntimeLabel()
-    {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null) return null;
-
-        GameObject labelObject = new GameObject("RuleInstructionLabel");
-        labelObject.transform.SetParent(canvas.transform, false);
-        RectTransform rect = labelObject.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 1f);
-        rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, -32f);
-        rect.sizeDelta = new Vector2(900f, 64f);
-
-        TextMeshProUGUI text = labelObject.AddComponent<TextMeshProUGUI>();
-        text.alignment = TextAlignmentOptions.Center;
-        text.fontSize = 30f;
-        text.color = Color.white;
-        text.raycastTarget = false;
-        return text;
     }
 }

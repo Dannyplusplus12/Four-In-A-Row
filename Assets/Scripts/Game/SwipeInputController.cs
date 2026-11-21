@@ -17,6 +17,11 @@ public sealed class SwipeInputController : MonoBehaviour
     private void Update()
     {
         if (GameData.selectedRuleMode != GameData.RuleMode.SwipeGravity) return;
+        if (gameController == null || !gameController.CanAcceptPlayerInput)
+        {
+            trackingPointer = false;
+            return;
+        }
 
         if (Input.touchCount > 0)
         {
@@ -48,7 +53,7 @@ public sealed class SwipeInputController : MonoBehaviour
 
     private void SubmitSwipe(Vector2 delta)
     {
-        if (gameController == null || !gameController.IsSinglePlayer || gameController.IsBotTurn)
+        if (gameController == null || !gameController.CanAcceptPlayerInput)
             return;
         if (delta.magnitude < minimumSwipeDistance) return;
 

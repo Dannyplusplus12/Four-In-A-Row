@@ -41,9 +41,12 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
     private bool hasTargetBaseScale;
     private Sprite runtimeBurstSprite;
     private int pendingStarsToAward;
+    private readonly List<GameObject> activeRewardStars = new List<GameObject>();
 
     private void Awake()
     {
+        if (requiredStarsToWin > 0)
+            GameData.SetRequiredStarsToWin(requiredStarsToWin);
         if (rewardSource != null)
             sourceImage = rewardSource.GetComponent<Image>();
 
@@ -54,12 +57,23 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
 
     private void OnDisable()
     {
+        CleanupActiveRewardStars();
         if (pendingStarsToAward > 0)
         {
             GameData.AddStars(pendingStarsToAward);
             pendingStarsToAward = 0;
             RefreshTotalStarsText();
         }
+    }
+
+    private void CleanupActiveRewardStars()
+    {
+        for (int i = 0; i < activeRewardStars.Count; i++)
+        {
+            if (activeRewardStars[i] != null)
+                Destroy(activeRewardStars[i]);
+        }
+        activeRewardStars.Clear();
     }
 
     private void OnDestroy()
@@ -96,7 +110,10 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
         ResolveTargetStarIcon();
         HideSourceStar();
         if (rewardRoutine != null)
+        {
             StopCoroutine(rewardRoutine);
+            CleanupActiveRewardStars();
+        }
 
         pendingStarsToAward += clampedStarCount;
         rewardRoutine = StartCoroutine(PlayRewardRoutine(clampedStarCount, onComplete));
@@ -209,6 +226,7 @@ public sealed class WinStarRewardAnimator : MonoBehaviour
             starTransform.localScale = Vector3.one * rewardScale;
 
             stars.Add(starImage);
+            activeRewardStars.Add(starObject);
         }
 
         return stars;

@@ -19,6 +19,8 @@ public sealed class GravityInputView : MonoBehaviour
     private bool isHolding;
     private int activePointerId = int.MinValue;
     private int selectedLine = -1;
+    private Vector2 holdStartPosition;
+    private const float SwipeCancelThreshold = 60f;
 
     private void Awake()
     {
@@ -31,10 +33,15 @@ public sealed class GravityInputView : MonoBehaviour
         HideHighlight();
     }
 
-    private void Start()
+    private void OnEnable()
     {
+        if (gameController == null) gameController = FindFirstObjectByType<GameController>();
         ApplyGravity(gameController == null ? currentGravity : gameController.CurrentGravity);
-        if (gameController != null) gameController.GravityChanged += ApplyGravity;
+        if (gameController != null)
+        {
+            gameController.GravityChanged -= ApplyGravity;
+            gameController.GravityChanged += ApplyGravity;
+        }
     }
 
     private void OnDisable()
@@ -50,6 +57,7 @@ public sealed class GravityInputView : MonoBehaviour
 
         isHolding = true;
         activePointerId = eventData.pointerId;
+        holdStartPosition = eventData.position;
         selectedLine = line;
         SnapHighlightToLine(line);
     }
@@ -58,6 +66,14 @@ public sealed class GravityInputView : MonoBehaviour
     {
         if (!isHolding || eventData == null || eventData.pointerId != activePointerId) return;
         if (gameController != null && !gameController.CanAcceptPlayerInput)
+        {
+            CancelHold();
+            return;
+        }
+
+        // In SwipeGravity mode, if the user drags past swipe distance, cancel piece drop so SwipeInputController owns the gesture.
+        if (GameData.selectedRuleMode == GameData.RuleMode.SwipeGravity &&
+            Vector2.Distance(eventData.position, holdStartPosition) >= SwipeCancelThreshold)
         {
             CancelHold();
             return;
@@ -135,8 +151,9 @@ public sealed class GravityInputView : MonoBehaviour
                 return index;
         }
 
+        bool usesVerticalInput = currentGravity == GravityDirection.Down || currentGravity == GravityDirection.Up;
         int nearestLine = -1;
-        float bestDistanceX = float.MaxValue;
+        float bestDistance = float.MaxValue;
 
         for (int index = 0; index < buttons.Length; index++)
         {
@@ -148,22 +165,39 @@ public sealed class GravityInputView : MonoBehaviour
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(buttonRect, screenPosition, eventCamera, out Vector2 localPoint))
                 continue;
 
-            float halfHeight = buttonRect.rect.height * 0.5f;
-            if (Mathf.Abs(localPoint.y) > halfHeight + dragOutMargin)
-                continue;
-
-            float absX = Mathf.Abs(localPoint.x);
-            if (absX < bestDistanceX)
+            if (usesVerticalInput)
             {
-                bestDistanceX = absX;
-                nearestLine = index;
+                float halfHeight = buttonRect.rect.height * 0.5f;
+                if (Mathf.Abs(localPoint.y) > halfHeight + dragOutMargin)
+                    continue;
+
+                float absX = Mathf.Abs(localPoint.x);
+                if (absX < bestDistance)
+                {
+                    bestDistance = absX;
+                    nearestLine = index;
+                }
+            }
+            else
+            {
+                float halfWidth = buttonRect.rect.width * 0.5f;
+                if (Mathf.Abs(localPoint.x) > halfWidth + dragOutMargin)
+                    continue;
+
+                float absY = Mathf.Abs(localPoint.y);
+                if (absY < bestDistance)
+                {
+                    bestDistance = absY;
+                    nearestLine = index;
+                }
             }
         }
 
         if (nearestLine >= 0)
         {
             RectTransform nearestRect = buttons[nearestLine].transform as RectTransform;
-            if (nearestRect != null && bestDistanceX <= nearestRect.rect.width * 0.5f + dragOutMargin)
+            float limit = usesVerticalInput ? nearestRect.rect.width * 0.5f : nearestRect.rect.height * 0.5f;
+            if (nearestRect != null && bestDistance <= limit + dragOutMargin)
                 return nearestLine;
         }
 
@@ -173,6 +207,11 @@ public sealed class GravityInputView : MonoBehaviour
     private void SnapHighlightToLine(int line)
     {
         if (hoverHighlight == null) return;
+        if (gameController != null && gameController.Model != null && !gameController.Model.CanDropInLine(line))
+        {
+            HideHighlight();
+            return;
+        }
         Button[] buttons = GetActiveButtons();
         if (buttons == null || line < 0 || line >= buttons.Length || buttons[line] == null)
         {

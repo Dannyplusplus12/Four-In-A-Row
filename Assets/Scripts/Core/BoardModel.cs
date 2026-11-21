@@ -11,6 +11,8 @@ namespace ConnectFour.Core
 
         private readonly Piece[,] pieces = new Piece[Columns, Rows];
         private readonly List<PieceMovement> pendingMovements = new List<PieceMovement>();
+        private readonly List<Piece> pendingRemovedPieces = new List<Piece>();
+        private readonly List<GridPosition> winningPositions = new List<GridPosition>();
         private readonly Queue<Piece>[] playerPieceQueues =
         {
             null,
@@ -18,9 +20,11 @@ namespace ConnectFour.Core
             new Queue<Piece>()
         };
         private readonly int[] playerTurnCounts = new int[3];
-            private int totalTurnCount;
-            private readonly System.Random random = new System.Random();
+        private int totalTurnCount;
+        private readonly System.Random random = new System.Random();
         private bool pendingTurnSwitch;
+        private bool pendingRequiresRebuild;
+        private bool pendingRequiresRotation;
         private BoardRuleMode ruleMode;
 
         public BoardState State { get; private set; } = BoardState.WaitingForInput;
@@ -30,24 +34,84 @@ namespace ConnectFour.Core
         public bool IsDraw { get; private set; }
         public BoardRuleMode RuleMode => ruleMode;
         public int RotationQuarterTurns { get; private set; }
+        public int TotalTurnCount => totalTurnCount;
+        public int WinningLength => ruleMode == BoardRuleMode.FiveStarWin ? 5 : ConnectLength;
+        public IReadOnlyList<GridPosition> WinningPositions => winningPositions;
 
-        public BoardModel() : this(BoardRuleMode.Classic)
+        public BoardModel() : this(BoardRuleMode.Classic, 1)
         {
         }
 
-        public BoardModel(BoardRuleMode ruleMode)
+        public BoardModel(BoardRuleMode ruleMode) : this(ruleMode, 1)
+        {
+        }
+
+        public BoardModel(BoardRuleMode ruleMode, int startingPlayerId)
         {
             this.ruleMode = ruleMode;
+            ActivePlayerId = startingPlayerId == 2 ? 2 : 1;
+        }
+
+        public int GetPlayerTurnCount(int playerId)
+        {
+            return playerId == 1 || playerId == 2 ? playerTurnCounts[playerId] : 0;
+        }
+
+        public Piece GetOldestPiece(int ownerId)
+        {
+            if (ownerId != 1 && ownerId != 2) return null;
+            foreach (Piece candidate in playerPieceQueues[ownerId])
+            {
+                if (TryFindPiece(candidate, out _))
+                    return candidate;
+            }
+            return null;
+        }
+
+        public bool CanDropInLine(int line)
+        {
+            return TryFindDropPosition(line, out _);
+        }
+
+        public bool TryPreviewDrop(int line, out GridPosition target)
+        {
+            return TryFindDropPosition(line, out target);
         }
 
         public BoardSnapshot CreateSnapshot()
         {
             int[] ownerIds = new int[Columns * Rows];
+            Dictionary<Piece, int> pieceIndexMap = new Dictionary<Piece, int>();
             for (int column = 0; column < Columns; column++)
             for (int row = 0; row < Rows; row++)
-                ownerIds[column * Rows + row] = pieces[column, row] == null ? 0 : pieces[column, row].Type == PieceType.Block ? -1 : pieces[column, row].OwnerId;
+            {
+                int index = column * Rows + row;
+                Piece piece = pieces[column, row];
+                ownerIds[index] = piece == null ? 0 : piece.Type == PieceType.Block ? -1 : piece.OwnerId;
+                if (piece != null && piece.Type == PieceType.Regular)
+                    pieceIndexMap[piece] = index;
+            }
 
-            return new BoardSnapshot(ownerIds, Gravity, ActivePlayerId);
+            List<int> pieceOrder = new List<int>();
+            for (int player = 1; player <= 2; player++)
+            {
+                foreach (Piece queued in playerPieceQueues[player])
+                {
+                    if (pieceIndexMap.TryGetValue(queued, out int idx))
+                        pieceOrder.Add(idx);
+                }
+            }
+
+            return new BoardSnapshot(
+                ownerIds,
+                Gravity,
+                ActivePlayerId,
+                ruleMode,
+                RotationQuarterTurns,
+                totalTurnCount,
+                playerTurnCounts[1],
+                playerTurnCounts[2],
+                pieceOrder.ToArray());
         }
 
         public bool RestoreSnapshot(BoardSnapshot snapshot)
@@ -57,34 +121,57 @@ namespace ConnectFour.Core
             if (snapshot.Gravity < GravityDirection.Down || snapshot.Gravity > GravityDirection.Right)
                 return false;
 
+            Piece[,] restored = new Piece[Columns, Rows];
             for (int column = 0; column < Columns; column++)
             for (int row = 0; row < Rows; row++)
             {
                 int ownerId = snapshot.OwnerIds[column * Rows + row];
-                if (ownerId != 0 && ownerId != 1 && ownerId != 2) return false;
                 if (ownerId < -1 || ownerId > 2) return false;
-                pieces[column, row] = ownerId == 0 ? null : ownerId == -1 ? new BlockPiece() : new RegularPiece(ownerId);
+                restored[column, row] = ownerId == 0 ? null : ownerId == -1 ? new BlockPiece() : new RegularPiece(ownerId);
             }
 
+            Array.Copy(restored, pieces, restored.Length);
+            ruleMode = snapshot.RuleMode;
             Gravity = snapshot.Gravity;
             ActivePlayerId = snapshot.ActivePlayerId == 2 ? 2 : 1;
-            RotationQuarterTurns = 0;
+            RotationQuarterTurns = ((snapshot.RotationQuarterTurns % 4) + 4) % 4;
             WinnerId = null;
             IsDraw = false;
+            winningPositions.Clear();
             playerPieceQueues[1].Clear();
             playerPieceQueues[2].Clear();
-            playerTurnCounts[1] = 0;
-            playerTurnCounts[2] = 0;
-            totalTurnCount = 0;
+            playerTurnCounts[1] = snapshot.Player1TurnCount;
+            playerTurnCounts[2] = snapshot.Player2TurnCount;
+            totalTurnCount = snapshot.TotalTurnCount;
+
+            HashSet<Piece> enqueued = new HashSet<Piece>();
+            if (snapshot.PieceOrder != null)
+            {
+                foreach (int index in snapshot.PieceOrder)
+                {
+                    if (index < 0 || index >= Columns * Rows) continue;
+                    int column = index / Rows;
+                    int row = index % Rows;
+                    Piece piece = pieces[column, row];
+                    if (piece != null && piece.Type == PieceType.Regular && (piece.OwnerId == 1 || piece.OwnerId == 2) && enqueued.Add(piece))
+                        playerPieceQueues[piece.OwnerId].Enqueue(piece);
+                }
+            }
+
             for (int column = 0; column < Columns; column++)
             for (int row = 0; row < Rows; row++)
             {
                 Piece piece = pieces[column, row];
-                if (piece == null) continue;
-                playerPieceQueues[piece.OwnerId].Enqueue(piece);
+                if (piece == null || piece.Type != PieceType.Regular) continue;
+                if ((piece.OwnerId == 1 || piece.OwnerId == 2) && enqueued.Add(piece))
+                    playerPieceQueues[piece.OwnerId].Enqueue(piece);
             }
+
             pendingMovements.Clear();
+            pendingRemovedPieces.Clear();
             pendingTurnSwitch = false;
+            pendingRequiresRebuild = false;
+            pendingRequiresRotation = false;
             State = BoardState.WaitingForInput;
             return true;
         }
@@ -116,6 +203,8 @@ namespace ConnectFour.Core
         {
             if (State != BoardState.WaitingForInput)
                 return TurnResult.Rejected("The board is not waiting for input.", State);
+            if (ruleMode == BoardRuleMode.SwipeGravity && direction == Gravity)
+                return TurnResult.Rejected("Gravity is already in this direction.", State);
 
             Gravity = direction;
             pendingMovements.Clear();
@@ -135,11 +224,14 @@ namespace ConnectFour.Core
             pieces[position.Column, position.Row] = null;
             pendingMovements.Clear();
             pendingRemovedPieces.Clear();
-            pendingRemovedPieces.Add(piece);
+            CompactBoard();
             pendingTurnSwitch = true;
-            pendingRequiresRebuild = true;
+            pendingRequiresRebuild = false;
             State = BoardState.Animating;
-            return TurnResult.Accepted(new List<PieceMovement>(), State);
+
+            TurnResult result = TurnResult.Accepted(new List<PieceMovement>(pendingMovements), State);
+            result.RemovedPieces.Add(piece);
+            return result;
         }
 
         public TurnResult CompleteAnimation()
@@ -159,13 +251,18 @@ namespace ConnectFour.Core
                 ApplyTurnRuleEffects();
             }
 
-            WinnerId = FindWinnerId();
-            IsDraw = WinnerId == null && IsFull();
+            EvaluateOutcome(out int? winnerId, out bool isDraw, out List<GridPosition> winCoords);
+            WinnerId = winnerId;
+            IsDraw = isDraw;
+            winningPositions.Clear();
+            if (winCoords != null) winningPositions.AddRange(winCoords);
+
             TurnOutcome outcome = WinnerId.HasValue ? TurnOutcome.Win : IsDraw ? TurnOutcome.Draw : TurnOutcome.None;
             State = outcome == TurnOutcome.None ? BoardState.WaitingForInput : BoardState.GameOver;
             TurnResult result = TurnResult.Accepted(new List<PieceMovement>(pendingMovements), State);
             result.Outcome = outcome;
             result.WinnerId = WinnerId;
+            result.WinningPositions.AddRange(winningPositions);
             result.RemovedPieces.AddRange(pendingRemovedPieces);
             result.RequiresRebuild = pendingRequiresRebuild;
             result.RequiresRotation = pendingRequiresRotation;
@@ -179,17 +276,13 @@ namespace ConnectFour.Core
             return result;
         }
 
-        private readonly List<Piece> pendingRemovedPieces = new List<Piece>();
-        private bool pendingRequiresRebuild;
-        private bool pendingRequiresRotation;
-
         private void ApplyTurnRuleEffects()
         {
             if (ruleMode == BoardRuleMode.DecayAfterEightTurns && playerPieceQueues[ActivePlayerId].Count > 8)
                 RemoveOldestPiece(ActivePlayerId);
 
             if (ruleMode == BoardRuleMode.RotateAfterTwoTurns &&
-                ActivePlayerId == 2 && playerTurnCounts[1] >= 4 && playerTurnCounts[2] >= 4)
+                playerTurnCounts[1] >= 4 && playerTurnCounts[2] >= 4)
             {
                 Gravity = NextClockwise(Gravity);
                 CompactBoard();
@@ -347,37 +440,71 @@ namespace ConnectFour.Core
             return default(GridPosition);
         }
 
-        private int? FindWinnerId()
+        private void EvaluateOutcome(out int? winnerId, out bool isDraw, out List<GridPosition> winCoords)
         {
-            bool activeWins = HasWinningLine(ActivePlayerId);
-            if (activeWins) return ActivePlayerId;
-            for (int player = 1; player <= 2; player++)
-                if (player != ActivePlayerId && HasWinningLine(player)) return player;
-            return null;
+            bool p1Wins = TryFindWinningLine(1, out List<GridPosition> p1Coords);
+            bool p2Wins = TryFindWinningLine(2, out List<GridPosition> p2Coords);
+
+            if (p1Wins && p2Wins)
+            {
+                winnerId = null;
+                isDraw = true;
+                winCoords = null;
+                return;
+            }
+
+            if (p1Wins)
+            {
+                winnerId = 1;
+                isDraw = false;
+                winCoords = p1Coords;
+                return;
+            }
+
+            if (p2Wins)
+            {
+                winnerId = 2;
+                isDraw = false;
+                winCoords = p2Coords;
+                return;
+            }
+
+            winnerId = null;
+            isDraw = IsFull();
+            winCoords = null;
         }
 
-        private bool HasWinningLine(int ownerId)
+        private bool TryFindWinningLine(int ownerId, out List<GridPosition> linePositions)
         {
             int[] columnSteps = { 1, 0, 1, 1 };
             int[] rowSteps = { 0, 1, 1, -1 };
+            int winningLength = WinningLength;
             for (int column = 0; column < Columns; column++)
             for (int row = 0; row < Rows; row++)
             {
                 if (pieces[column, row]?.OwnerId != ownerId) continue;
                 for (int direction = 0; direction < columnSteps.Length; direction++)
                 {
-                    int count = 1;
-                    int winningLength = ruleMode == BoardRuleMode.FiveStarWin ? 5 : ConnectLength;
+                    List<GridPosition> candidate = new List<GridPosition>(winningLength)
+                    {
+                        new GridPosition(column, row)
+                    };
                     for (int distance = 1; distance < winningLength; distance++)
                     {
                         int nextColumn = column + columnSteps[direction] * distance;
                         int nextRow = row + rowSteps[direction] * distance;
-                        if (!IsInside(new GridPosition(nextColumn, nextRow)) || pieces[nextColumn, nextRow]?.OwnerId != ownerId) break;
-                        count++;
+                        GridPosition nextPos = new GridPosition(nextColumn, nextRow);
+                        if (!IsInside(nextPos) || pieces[nextColumn, nextRow]?.OwnerId != ownerId) break;
+                        candidate.Add(nextPos);
                     }
-                    if (count == winningLength) return true;
+                    if (candidate.Count == winningLength)
+                    {
+                        linePositions = candidate;
+                        return true;
+                    }
                 }
             }
+            linePositions = null;
             return false;
         }
 
@@ -387,20 +514,32 @@ namespace ConnectFour.Core
             if (Gravity == GravityDirection.Down || Gravity == GravityDirection.Up)
             {
                 if (line < 0 || line >= Columns) return false;
-                int start = Gravity == GravityDirection.Down ? 0 : Rows - 1;
-                int step = Gravity == GravityDirection.Down ? 1 : -1;
-                for (int row = start; row >= 0 && row < Rows; row += step)
-                    if (pieces[line, row] == null) { position = new GridPosition(line, row); return true; }
+                // Scan from spawn edge toward gravity floor; stop at first occupied cell so pieces never pass through a BlockPiece.
+                int spawnRow = Gravity == GravityDirection.Down ? Rows - 1 : 0;
+                int step = Gravity == GravityDirection.Down ? -1 : 1;
+                bool found = false;
+                for (int row = spawnRow; row >= 0 && row < Rows; row += step)
+                {
+                    if (pieces[line, row] != null) break;
+                    position = new GridPosition(line, row);
+                    found = true;
+                }
+                return found;
             }
             else
             {
                 if (line < 0 || line >= Rows) return false;
-                int start = Gravity == GravityDirection.Left ? 0 : Columns - 1;
-                int step = Gravity == GravityDirection.Left ? 1 : -1;
-                for (int column = start; column >= 0 && column < Columns; column += step)
-                    if (pieces[column, line] == null) { position = new GridPosition(column, line); return true; }
+                int spawnColumn = Gravity == GravityDirection.Left ? Columns - 1 : 0;
+                int step = Gravity == GravityDirection.Left ? -1 : 1;
+                bool found = false;
+                for (int column = spawnColumn; column >= 0 && column < Columns; column += step)
+                {
+                    if (pieces[column, line] != null) break;
+                    position = new GridPosition(column, line);
+                    found = true;
+                }
+                return found;
             }
-            return false;
         }
 
         private GridPosition GetSpawnPosition(int line)

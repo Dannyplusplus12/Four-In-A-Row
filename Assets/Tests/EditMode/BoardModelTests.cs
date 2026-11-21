@@ -138,17 +138,21 @@ namespace ConnectFour.Core.Tests
             DropAndComplete(vertical, 0); DropAndComplete(vertical, 1);
             DropAndComplete(vertical, 0); DropAndComplete(vertical, 1);
             DropAndComplete(vertical, 0); DropAndComplete(vertical, 1);
-            DropAndComplete(vertical, 0);
-            Assert.That(vertical.CompleteAnimation().WinnerId, Is.EqualTo(1));
+            vertical.DropPiece(0);
+            TurnResult verticalCompleted = vertical.CompleteAnimation();
+            Assert.That(verticalCompleted.WinnerId, Is.EqualTo(1));
+            Assert.That(verticalCompleted.WinningPositions.Count, Is.EqualTo(4));
 
             BoardModel diagonal = new BoardModel();
             DropAndComplete(diagonal, 0); DropAndComplete(diagonal, 1);
             DropAndComplete(diagonal, 1); DropAndComplete(diagonal, 2);
             DropAndComplete(diagonal, 2); DropAndComplete(diagonal, 3);
             DropAndComplete(diagonal, 2); DropAndComplete(diagonal, 3);
-            DropAndComplete(diagonal, 3); DropAndComplete(diagonal, 4);
-            DropAndComplete(diagonal, 3);
-            Assert.That(diagonal.CompleteAnimation().WinnerId, Is.EqualTo(1));
+            DropAndComplete(diagonal, 3); DropAndComplete(diagonal, 6);
+            diagonal.DropPiece(3);
+            TurnResult diagonalCompleted = diagonal.CompleteAnimation();
+            Assert.That(diagonalCompleted.WinnerId, Is.EqualTo(1));
+            Assert.That(diagonalCompleted.WinningPositions.Count, Is.EqualTo(4));
         }
 
         [Test]
@@ -280,6 +284,89 @@ namespace ConnectFour.Core.Tests
 
             Assert.That(playerTwoDrop.Success, Is.True);
             Assert.That(() => board.CompleteAnimation(), Throws.Nothing);
+        }
+
+        [Test]
+        public void SnapshotWithBlockPieceAndRuleModeRestoresCleanly()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.BlockAfterFourTurns);
+            for (int turn = 0; turn < 4; turn++)
+                DropAndComplete(board, turn);
+
+            BoardSnapshot snapshot = board.CreateSnapshot();
+            BoardModel restored = new BoardModel();
+
+            Assert.That(restored.RestoreSnapshot(snapshot), Is.True);
+            Assert.That(restored.RuleMode, Is.EqualTo(BoardRuleMode.BlockAfterFourTurns));
+            Assert.That(restored.TotalTurnCount, Is.EqualTo(4));
+
+            int blockCount = 0;
+            for (int column = 0; column < BoardModel.Columns; column++)
+            for (int row = 0; row < BoardModel.Rows; row++)
+                if (restored.GetPiece(new GridPosition(column, row))?.Type == PieceType.Block)
+                    blockCount++;
+            Assert.That(blockCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DestroyStarOnTapCompactsPiecesAbove()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.DestroyStarOnTap);
+            DropAndComplete(board, 2); // (2,0) P1
+            DropAndComplete(board, 2); // (2,1) P2
+
+            Piece bottom = board.GetPiece(new GridPosition(2, 0));
+            Piece top = board.GetPiece(new GridPosition(2, 1));
+
+            TurnResult removed = board.RemovePiece(bottom);
+            Assert.That(removed.Success, Is.True);
+            Assert.That(removed.RemovedPieces, Contains.Item(bottom));
+            Assert.That(removed.Movements.Any(m => m.Piece == top && m.To == new GridPosition(2, 0)), Is.True);
+
+            board.CompleteAnimation();
+            Assert.That(board.GetPiece(new GridPosition(2, 0)), Is.SameAs(top));
+            Assert.That(board.GetPiece(new GridPosition(2, 1)), Is.Null);
+        }
+
+        [Test]
+        public void SwipeGravityRejectsSameDirection()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.SwipeGravity);
+            TurnResult sameDir = board.RotateGravity(GravityDirection.Down);
+            Assert.That(sameDir.Success, Is.False);
+            Assert.That(board.State, Is.EqualTo(BoardState.WaitingForInput));
+
+            TurnResult validDir = board.RotateGravity(GravityDirection.Left);
+            Assert.That(validDir.Success, Is.True);
+            board.CompleteAnimation();
+            Assert.That(board.ActivePlayerId, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void FiveStarWinRequiresFiveInARow()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.FiveStarWin);
+            DropAndComplete(board, 0); DropAndComplete(board, 0);
+            DropAndComplete(board, 1); DropAndComplete(board, 1);
+            DropAndComplete(board, 2); DropAndComplete(board, 2);
+            DropAndComplete(board, 3); DropAndComplete(board, 3);
+            Assert.That(board.WinnerId, Is.Null);
+
+            board.DropPiece(4);
+            TurnResult completed = board.CompleteAnimation();
+            Assert.That(completed.Outcome, Is.EqualTo(TurnOutcome.Win));
+            Assert.That(completed.WinnerId, Is.EqualTo(1));
+            Assert.That(completed.WinningPositions.Count, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void StartingPlayerTwoIsRespected()
+        {
+            BoardModel board = new BoardModel(BoardRuleMode.Classic, 2);
+            Assert.That(board.ActivePlayerId, Is.EqualTo(2));
+            DropAndComplete(board, 3);
+            Assert.That(board.GetPiece(new GridPosition(3, 0)).OwnerId, Is.EqualTo(2));
+            Assert.That(board.ActivePlayerId, Is.EqualTo(1));
         }
 
         private static void DropAndComplete(BoardModel board, int line)

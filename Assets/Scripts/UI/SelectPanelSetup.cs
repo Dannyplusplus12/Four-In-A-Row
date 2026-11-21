@@ -76,6 +76,10 @@ public class SelectPanelSetup : MonoBehaviour
         {
             difficultyGroup.SetActive(isOnePlayer);
         }
+        if (difficultySlider != null)
+        {
+            difficultySlider.SetValueWithoutNotify(Mathf.Clamp(GameData.difficultyLevel, 1, 3));
+        }
     }
 
     public void OnColorSwapClicked()

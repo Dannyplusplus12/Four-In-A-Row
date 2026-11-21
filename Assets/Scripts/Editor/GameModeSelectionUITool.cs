@@ -99,10 +99,10 @@ public static class GameModeSelectionUITool
         item.SetActive(false);
 
         RectTransform itemRect = item.GetComponent<RectTransform>();
-        itemRect.sizeDelta = new Vector2(0f, 120f);
+        itemRect.sizeDelta = new Vector2(0f, 156f);
         LayoutElement itemLayout = item.GetComponent<LayoutElement>();
-        itemLayout.minHeight = 120f;
-        itemLayout.preferredHeight = 120f;
+        itemLayout.minHeight = 156f;
+        itemLayout.preferredHeight = 156f;
         itemLayout.flexibleWidth = 1f;
 
         Image itemBackground = item.GetComponent<Image>();
@@ -110,11 +110,15 @@ public static class GameModeSelectionUITool
 
         Button button = item.GetComponent<Button>();
         button.targetGraphic = itemBackground;
+        item.AddComponent<UIButtonPopEffect>();
 
-        GameObject titleObject = CreateTextChild(item.transform, "Title", "Mode Title", 24, TextAlignmentOptions.Left);
-        GameObject subtitleObject = CreateTextChild(item.transform, "Subtitle", "Rule description", 16, TextAlignmentOptions.Left);
-        SetAnchors(titleObject.GetComponent<RectTransform>(), new Vector2(0.06f, 0.52f), new Vector2(0.68f, 0.9f), new Vector2(12f, 0f), new Vector2(-8f, 0f));
-        SetAnchors(subtitleObject.GetComponent<RectTransform>(), new Vector2(0.06f, 0.1f), new Vector2(0.68f, 0.5f), new Vector2(12f, 0f), new Vector2(-8f, 0f));
+        GameObject titleObject = CreateTextChild(item.transform, "Title", "Mode Title", 36, TextAlignmentOptions.Left);
+        GameObject subtitleObject = CreateTextChild(item.transform, "Subtitle", "Rule description", 23, TextAlignmentOptions.TopLeft);
+        titleObject.GetComponent<TMP_Text>().color = new Color(1f, 0.96f, 0.65f, 1f);
+        titleObject.GetComponent<TMP_Text>().fontStyle = FontStyles.Bold;
+        subtitleObject.GetComponent<TMP_Text>().color = new Color(0.95f, 0.97f, 1f, 0.95f);
+        SetAnchors(titleObject.GetComponent<RectTransform>(), new Vector2(0.05f, 0.56f), new Vector2(0.68f, 0.88f), new Vector2(16f, 0f), new Vector2(-8f, 0f));
+        SetAnchors(subtitleObject.GetComponent<RectTransform>(), new Vector2(0.05f, 0.14f), new Vector2(0.68f, 0.54f), new Vector2(16f, 0f), new Vector2(-8f, 0f));
 
         Image[] stars = new Image[3];
         for (int index = 0; index < stars.Length; index++)
@@ -123,12 +127,14 @@ public static class GameModeSelectionUITool
             Undo.RegisterCreatedObjectUndo(starObject, "Create difficulty star");
             starObject.transform.SetParent(item.transform, false);
             RectTransform starRect = starObject.GetComponent<RectTransform>();
-            starRect.anchorMin = new Vector2(0.72f + index * 0.08f, 0.35f);
-            starRect.anchorMax = new Vector2(0.78f + index * 0.08f, 0.65f);
+            starRect.anchorMin = new Vector2(0.71f + index * 0.08f, 0.30f);
+            starRect.anchorMax = new Vector2(0.78f + index * 0.08f, 0.70f);
             starRect.offsetMin = Vector2.zero;
             starRect.offsetMax = Vector2.zero;
             stars[index] = starObject.GetComponent<Image>();
             stars[index].color = Color.white;
+            stars[index].preserveAspect = true;
+            stars[index].raycastTarget = false;
         }
 
         SerializedObject serializedItem = new SerializedObject(item.GetComponent<GameModeItemUI>());
@@ -155,7 +161,7 @@ public static class GameModeSelectionUITool
         scrollViewObject.transform.SetParent(panel, false);
 
         RectTransform scrollRect = scrollViewObject.GetComponent<RectTransform>();
-        SetAnchors(scrollRect, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.82f), Vector2.zero, Vector2.zero);
+        SetAnchors(scrollRect, new Vector2(0.04f, 0f), new Vector2(0.96f, 1f), new Vector2(0f, 118f), new Vector2(0f, -206f));
         scrollViewObject.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
 
         GameObject viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
@@ -174,8 +180,8 @@ public static class GameModeSelectionUITool
         content.sizeDelta = new Vector2(0f, 0f);
 
         VerticalLayoutGroup layout = contentObject.GetComponent<VerticalLayoutGroup>();
-        layout.spacing = 12f;
-        layout.padding = new RectOffset(16, 16, 16, 16);
+        layout.spacing = 18f;
+        layout.padding = new RectOffset(12, 12, 12, 24);
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -207,7 +213,8 @@ public static class GameModeSelectionUITool
         textComponent.fontSize = fontSize;
         textComponent.alignment = alignment;
         textComponent.color = Color.white;
-        textComponent.enableWordWrapping = true;
+        textComponent.textWrappingMode = TextWrappingModes.Normal;
+        textComponent.raycastTarget = false;
         return textObject;
     }
 

@@ -25,7 +25,7 @@ public sealed class GravitySensorController : MonoBehaviour
     private void Update()
     {
         GravityDirection direction;
-        if (keyboardInEditor && TryReadKeyboard(out direction))
+        if (keyboardInEditor && Application.isEditor && TryReadKeyboard(out direction))
         {
             Publish(direction);
             return;
@@ -52,11 +52,12 @@ public sealed class GravitySensorController : MonoBehaviour
             if (keyboard.wKey.wasPressedThisFrame) { direction = GravityDirection.Up; return true; }
             if (keyboard.dKey.wasPressedThisFrame) { direction = GravityDirection.Right; return true; }
         }
-#endif
+#else
         if (Input.GetKeyDown(KeyCode.S)) { direction = GravityDirection.Down; return true; }
         if (Input.GetKeyDown(KeyCode.A)) { direction = GravityDirection.Left; return true; }
         if (Input.GetKeyDown(KeyCode.W)) { direction = GravityDirection.Up; return true; }
         if (Input.GetKeyDown(KeyCode.D)) { direction = GravityDirection.Right; return true; }
+#endif
         direction = default(GravityDirection);
         return false;
     }

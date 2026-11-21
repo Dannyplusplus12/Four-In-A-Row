@@ -27,6 +27,7 @@ public class UIButtonPopEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
 
     public void OnPointerDown(PointerEventData eventData)
     {
+        SoundManager.PlayClick();
         if (currentAnim != null) StopCoroutine(currentAnim);
         currentAnim = StartCoroutine(ScaleTo(originalScale * pressedScale, 0.06f));
     }
@@ -58,7 +59,7 @@ public class UIButtonPopEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
 
         while (t < half)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             rectTransform.localScale = Vector3.Lerp(start, peak, Mathf.SmoothStep(0f, 1f, t / half));
             yield return null;
         }
@@ -66,7 +67,7 @@ public class UIButtonPopEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
         t = 0f;
         while (t < half)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             rectTransform.localScale = Vector3.Lerp(peak, originalScale, Mathf.SmoothStep(0f, 1f, t / half));
             yield return null;
         }
@@ -81,7 +82,7 @@ public class UIButtonPopEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
         float t = 0f;
         while (t < time)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             rectTransform.localScale = Vector3.Lerp(start, target, t / time);
             yield return null;
         }

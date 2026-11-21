@@ -81,6 +81,7 @@ namespace ConnectFour.Core
         public string FailureReason { get; }
         public List<PieceMovement> Movements { get; }
         public List<Piece> RemovedPieces { get; }
+        public List<GridPosition> WinningPositions { get; }
         public bool RequiresRebuild { get; internal set; }
         public bool RequiresRotation { get; internal set; }
         public int RotationQuarterTurns { get; internal set; }
@@ -94,6 +95,7 @@ namespace ConnectFour.Core
             FailureReason = failureReason;
             Movements = movements ?? new List<PieceMovement>();
             RemovedPieces = new List<Piece>();
+            WinningPositions = new List<GridPosition>();
         }
 
         public static TurnResult Accepted(List<PieceMovement> movements, BoardState state)
@@ -112,7 +114,7 @@ namespace ConnectFour.Core
             {
                 State = BoardState.GameOver,
                 Outcome = TurnOutcome.Win,
-                WinnerId = playerWon ? 2 : 1
+                WinnerId = playerWon ? 1 : 2
             };
         }
     }
